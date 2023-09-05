@@ -1,0 +1,4 @@
+qiskit
+qiskit-nature[pyscf]
+qiskit_aer
+jupyter
