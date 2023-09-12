@@ -1,0 +1,9 @@
+[run_pyscf]
+HF   energy: -73.8906694968649731 Ha
+MP2  energy: -73.9151292009285186 Ha
+CCSD energy: -73.9530024609341154 Ha
+CISD energy: -73.9463783141979292 Ha
+FCI  energy: -74.0538672643696430 Ha
+
+n_electrons: 8
+n_qubits: 12

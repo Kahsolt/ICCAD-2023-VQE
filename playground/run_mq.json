@@ -1,0 +1,72 @@
+{
+  "energy": {
+    "L=mq_O=sp_I=zeros_sugar=0": [
+      -74.02140838045536
+    ],
+    "L=mq_O=sp_I=normal_sugar=0": [
+      -74.02140838045501
+    ],
+    "L=mq_O=sp_I=uniform_sugar=0": [
+      -74.02140838045506
+    ],
+    "L=mq_O=sp_I=ccsd_sugar=0": [
+      -73.92664418192726
+    ],
+    "L=mq_O=mq_I=zeros_sugar=0": [
+      -73.95279693603516
+    ],
+    "L=mq_O=mq_I=normal_sugar=0": [
+      -73.95309448242188
+    ],
+    "L=mq_O=mq_I=uniform_sugar=0": [
+      -73.95313262939453
+    ],
+    "L=mq_O=mq_I=ccsd_sugar=0": [
+      -73.95194244384766
+    ],
+    "L=qp_O=sp_I=zeros_sugar=0": [
+      -74.01639260704872
+    ],
+    "L=qp_O=sp_I=normal_sugar=0": [
+      -74.0163926070489
+    ],
+    "L=qp_O=sp_I=uniform_sugar=0": [
+      -74.01639260704886
+    ]
+  },
+  "ts": {
+    "L=mq_O=sp_I=zeros_sugar=0": [
+      43.67298722267151
+    ],
+    "L=mq_O=sp_I=normal_sugar=0": [
+      36.69696259498596
+    ],
+    "L=mq_O=sp_I=uniform_sugar=0": [
+      37.599344968795776
+    ],
+    "L=mq_O=sp_I=ccsd_sugar=0": [
+      29.14455795288086
+    ],
+    "L=mq_O=mq_I=zeros_sugar=0": [
+      32.86427402496338
+    ],
+    "L=mq_O=mq_I=normal_sugar=0": [
+      30.97864842414856
+    ],
+    "L=mq_O=mq_I=uniform_sugar=0": [
+      35.97131085395813
+    ],
+    "L=mq_O=mq_I=ccsd_sugar=0": [
+      44.411163091659546
+    ],
+    "L=qp_O=sp_I=zeros_sugar=0": [
+      0.27945995330810547
+    ],
+    "L=qp_O=sp_I=normal_sugar=0": [
+      0.3058183193206787
+    ],
+    "L=qp_O=sp_I=uniform_sugar=0": [
+      0.23480844497680664
+    ]
+  }
+}

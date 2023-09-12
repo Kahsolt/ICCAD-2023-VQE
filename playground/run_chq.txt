@@ -1,0 +1,28 @@
+### UCCSD
+
+[Nelder-Mead]      n_calls: 45,   result: -73.89066949686503
+[Powell]           n_calls: 1442, result: -73.94054668713562
+[COBYLA]           n_calls: 45,   result: -73.89066949686503
+[L-BFGS-B]         n_calls: 47,   result: -73.95299701046035
+[SLSQP]            n_calls: 130,  result: -73.95299771674318
+[Gradient-Descent] n_calls: 200,  result: -73.90486712006232
+
+
+### UCCS
+
+[Nelder-Mead]      n_calls: 9,   result: -73.89066949686503
+[Powell]           n_calls: 290, result: -73.89066949686504
+[COBYLA]           n_calls: 9,   result: -73.89066949686503
+[L-BFGS-B]         n_calls: 12,  result: -73.89066949686503
+[SLSQP]            n_calls: 25,  result: -73.89066949686503
+[Gradient-Descent] n_calls: 200, result: -73.89066949686503
+
+
+### UCCD
+
+[Nelder-Mead]      n_calls: 37,   result: -73.89066949686503
+[Powell]           n_calls: 1173, result: -73.94029112914264
+[COBYLA]           n_calls: 37,   result: -73.89066949686503
+[L-BFGS-B]         n_calls: 62,   result: -73.95269540682797
+[SLSQP]            n_calls: 113,  result: -73.95269545003913
+[Gradient-Descent] n_calls: 200,  result: -73.90488224582211
