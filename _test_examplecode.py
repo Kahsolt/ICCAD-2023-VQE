@@ -1,14 +1,18 @@
 # converted from `QC-Contest-Demo/examplecode.ipynb`
 
-from pathlib import Path
 from time import time
+from pathlib import Path
+from typing import Tuple, Dict, Any
 from argparse import ArgumentParser
 
+import numpy as np
 from qiskit import pulse
 from qiskit.opflow.primitive_ops.pauli_sum_op import PauliSumOp
+from qiskit.circuit import QuantumCircuit
 from qiskit.algorithms.minimum_eigensolvers import VQE, NumPyMinimumEigensolver
 from qiskit.algorithms.optimizers import SLSQP, L_BFGS_B, P_BFGS, COBYLA, CG, SLSQP, ADAM
 from qiskit.providers.fake_provider import FakeMontreal
+from qiskit.utils import algorithm_globals
 from qiskit_aer.primitives import Estimator
 from qiskit_nature.units import DistanceUnit
 from qiskit_nature.second_q.drivers import PySCFDriver
@@ -18,10 +22,21 @@ from qiskit_nature.second_q.mappers import JordanWignerMapper, QubitConverter
 from qiskit_nature.second_q.circuit.library import HartreeFock, UCCSD
 from qiskit_nature.second_q.algorithms import GroundStateEigensolver
 
-from utils import *
-
 Molecular = ElectronicStructureProblem
 Mapper = JordanWignerMapper
+
+OPTIMZERS = {
+  'slsqp':  lambda args: SLSQP   (maxiter=args.T, ftol=args.tol, tol=args.tol, disp=True),
+  'lbfgsb': lambda args: L_BFGS_B(maxiter=args.T, ftol=args.tol),
+  'pbfgs':  lambda args: P_BFGS  (maxfun =args.T, ftol=args.tol),
+  'cobyla': lambda args: COBYLA  (maxiter=args.T, tol=args.tol, disp=True),
+  'cg':     lambda args: CG      (maxiter=args.T, tol=args.tol, disp=True),
+  'adam':   lambda args: ADAM    (maxiter=args.T, tol=args.tol),
+}
+
+BASE_PATH = Path(__file__).parent.absolute()
+
+shots = 6000
 
 
 def get_mol(args) -> Tuple[Molecular, Mapper]:
@@ -98,7 +113,7 @@ def get_mol(args) -> Tuple[Molecular, Mapper]:
     qubit_op.coeffs
     qubit_op.is_hermitian     # True
 
-    fp = Path(__file__).with_suffix('.ham')
+    fp = BASE_PATH / 'ham.txt'
     if not fp.exists():
       with open(fp, 'w', encoding='utf-8') as fh:
         for coeff, pauli in zip(pauli_op.coeffs, pauli_op.paulis):
@@ -108,30 +123,31 @@ def get_mol(args) -> Tuple[Molecular, Mapper]:
 
 
 def solver_numpy(args, mol:Molecular, mapper:Mapper) -> float:
-  solver = GroundStateEigensolver(
-    mapper,
-    NumPyMinimumEigensolver(),
-  )
-
+  print('>> numpy solver start...')
+  numpy_solver = NumPyMinimumEigensolver()
+  solver = GroundStateEigensolver(mapper, numpy_solver)
   s = time()
   res = solver.solve(mol)
   t = time()
-  print('time cost:', t - s)
   print(res)
 
-  res.eigenstates
-  res.eigenvalues               # [-78.75252123]
-  res.hartree_fock_energy       # -73.89066949686494
-  res.nuclear_repulsion_energy  # 4.36537496654537
-  res.groundenergy              # -78.75252123473416
-  res.total_energies            # [-74.38714627]
+  if 'debug':
+    res.eigenstates
+    res.eigenvalues               # [-78.75252123]
+    res.hartree_fock_energy       # -73.89066949686494
+    res.nuclear_repulsion_energy  # 4.36537496654537
+    res.groundenergy              # -78.75252123473416
+    res.total_energies            # [-74.38714627]
 
   numpy_gs = res.groundenergy + res.nuclear_repulsion_energy
-  print('numpy_gs:', numpy_gs)  # -74.38714627
+  print(f'>> numpy_gs: {numpy_gs} ({t - s:.3f}s)')  # -74.38714627
   return numpy_gs
 
 
-def solver_vqe(args, mol:Molecular, mapper:Mapper, ref_value:float) -> float:
+def solver_vqe(args, mol:Molecular, mapper:Mapper) -> Tuple[float, QuantumCircuit]:
+  print('num_spatial_orbitals:', mol.num_spatial_orbitals)
+  print('num_particles:', mol.num_particles)
+
   ansatz = UCCSD(
     mol.num_spatial_orbitals, # 6
     mol.num_particles,        # (4, 4)
@@ -141,6 +157,7 @@ def solver_vqe(args, mol:Molecular, mapper:Mapper, ref_value:float) -> float:
       mol.num_particles,
       mapper,
     ),
+    reps=1,
   )
   estimator = Estimator(
     backend_options = {
@@ -156,51 +173,51 @@ def solver_vqe(args, mol:Molecular, mapper:Mapper, ref_value:float) -> float:
       'seed_transpiler': args.seed,
     }
   )
-  OPTIMZERS = {
-    'slsqp':  lambda: SLSQP(maxiter=args.T, ftol=args.tol, tol=args.tol, disp=True),
-    'lbfgsb': lambda: L_BFGS_B(maxiter=args.T, maxfun=args.T, ftol=args.tol),
-    'pbfgs':  lambda: P_BFGS(maxfun=args.T, ftol=args.tol),
-    'cobyla': lambda: COBYLA(maxiter=args.T, tol=args.tol, disp=True),
-    'cg':     lambda: CG(maxiter=args.T, gtol=args.tol, tol=args.tol, disp=True),
-    'adam':   lambda: ADAM(maxiter=args.T, tol=args.tol),
-  }
-  optimizer = OPTIMZERS[args.O]()
-  vqe_solver = VQE(estimator, ansatz, optimizer)
-  vqe_solver.initial_point = [0.0] * ansatz.num_parameters
+  optimizer = OPTIMZERS[args.O](args)
+
+  def callback_fn(iter:int, params:np.ndarray, fx:float, metadata:Dict[str, Any]):
+    print(f'>> {iter} / {args.T}...')
 
   print('>> vqe solver start...')
-
-  s = time()
+  vqe_solver = VQE(estimator, ansatz, optimizer, callback=callback_fn)
+  vqe_solver.initial_point = [0.0] * ansatz.num_parameters
   solver = GroundStateEigensolver(mapper, vqe_solver)
+  s = time()
   res = solver.solve(mol)
   t = time()
-  print('time cost:', t - s)
   print(res)
 
+  if 'debug':
+    res.eigenstates
+    res.eigenvalues
+    res.hartree_fock_energy
+    res.nuclear_repulsion_energy
+    res.groundenergy
+    res.total_energies
+
   vqe_gs = res.groundenergy + res.nuclear_repulsion_energy
-  print('vqe_gs:', vqe_gs)
-  err = abs(ref_value - vqe_gs) / abs(ref_value)
-  print(f'Error rate: {err:%}')
+  print(f'>> vqe_gs: {vqe_gs} ({t - s:.3f}s)', )
+  return vqe_gs, ansatz
+
+
+if __name__ == '__main__':
+  parser = ArgumentParser()
+  parser.add_argument('-O', default='cobyla', choices=OPTIMZERS.keys(), help='optim meth')
+  parser.add_argument('-T', default=10, type=int, help='optim max_iter')
+  parser.add_argument('--tol',  default=1e-4, type=float, help='optim tolerance')
+  parser.add_argument('--seed', default=170,  type=int, help='rand seed')
+  args = parser.parse_args()
+
+  algorithm_globals.random_seed = args.seed
+
+  mol, mapper = get_mol(args)
+  numpy_gs = solver_numpy(args, mol, mapper)
+  vqe_gs, ansatz = solver_vqe(args, mol, mapper)
+
+  err = abs(numpy_gs - vqe_gs) / abs(numpy_gs)
+  print(f'>> Error Rate: {err:%}')
 
   system_model = FakeMontreal()
   with pulse.build(system_model) as prog:
     pulse.call(ansatz)
   print('duration:', prog.duration)
-
-  return vqe_gs
-
-
-if __name__ == '__main__':
-  parser = ArgumentParser()
-  parser.add_argument('-M', default='montreal', choices=['cairo', 'kolkata', 'montreal'], help='noise model')
-  parser.add_argument('-O', default='slsqp', choices=['slsqp', 'lbfgsb', 'pbfgs', 'cobyla', 'cg', 'adam'], help='optim meth')
-  parser.add_argument('-T', default=100, type=int, help='optim max_iter')
-  parser.add_argument('--tol',  default=1e-4, type=float, help='optim tolerance')
-  parser.add_argument('--seed', default=170,  type=int, help='rand seed')
-  args = parser.parse_args()
-
-  seed_everything(args.seed)
-
-  mol, mapper = get_mol(args)
-  numpy_gs = solver_numpy(args, mol, mapper)
-  vqe_gs = solver_vqe(args, mol, mapper, numpy_gs)

@@ -18,6 +18,9 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
   - `conda activate qs`
 - install dependencies `pip install -r requirements.txt`
 - clone the code & data base `git clone https://github.com/qccontest/QC-Contest-Demo`
+- test demo code runnable
+  - `python _test_examplecode.py -T 2`; this might be very **slow**, just be patient :(
+  - `python _test_NoiseModel_and_SystemModel.py`
 
 ⚪ run
 

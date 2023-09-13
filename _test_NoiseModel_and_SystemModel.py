@@ -8,13 +8,14 @@ from qiskit import pulse, transpile
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit.random import random_circuit
 from qiskit.providers.fake_provider import FakeMontreal
+from qiskit.utils import algorithm_globals
 from qiskit_aer.primitives import Estimator
 from qiskit_aer.noise import NoiseModel
 
-from utils import *
-
 BASE_PATH = Path(__file__).parent.absolute()
 NOISE_MODEL_PATH = BASE_PATH / 'QC-Contest-Demo' / 'NoiseModel'
+
+shots = 6000
 
 
 def run(args):
@@ -26,9 +27,17 @@ def run(args):
   print()
 
   circuit = random_circuit(2, 2, seed=args.seed).decompose(reps=1)
-  circuit.draw()
+  out = circuit.draw(output='text')
+  print(out)
+  print()
+
+  # transpile := simplify + optimize circuit towards known hardware backend
+  # https://qiskit.org/documentation/apidoc/transpiler.html
   system_model = FakeMontreal()
   transpiled_circuit = transpile(circuit, backend=system_model)
+  out = transpiled_circuit.draw(output='text')
+  print(out)
+  print()
 
   observable = SparsePauliOp('IIIIIIIIIIIIIIIIIIIIIIIIIXZ')
   print('observable:', observable.paulis)
@@ -74,6 +83,6 @@ if __name__ == '__main__':
   parser.add_argument('--seed', default=170, type=int, help='rand seed')
   args = parser.parse_args()
 
-  seed_everything(args.seed)
+  algorithm_globals.random_seed = args.seed
 
   run(args)
