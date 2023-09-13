@@ -24,14 +24,15 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
 
 ⚪ run
 
-- what?
+- `python run.py`
 
 
 ### references
 
-- qiskit:
+- Qiskit
   - tutorial: [https://qiskit.org/documentation/tutorials.html](https://qiskit.org/documentation/tutorials.html)
   - doc: [https://qiskit.org/documentation/apidoc/index.html](https://qiskit.org/documentation/apidoc/index.html)
+  - algorithms: [https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms](https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms)
 - example code: [https://github.com/qccontest/QC-Contest-Demo](https://github.com/qccontest/QC-Contest-Demo)  
 
 ----
