@@ -7,7 +7,7 @@ from utils import *
 from qiskit.algorithms.minimum_eigensolvers import VQE, VQEResult, AdaptVQE, AdaptVQEResult, SamplingVQE, SamplingVQEResult, QAOA
 from qiskit.algorithms.minimum_eigensolvers import MinimumEigensolver, NumPyMinimumEigensolver, NumPyMinimumEigensolverResult
 from qiskit_aer.primitives import Estimator
-from qiskit_nature.second_q.problems import EigenstateResult
+from qiskit_nature.second_q.problems import EigenstateResult, ElectronicStructureResult
 from qiskit_nature.second_q.algorithms import GroundStateEigensolver
 from qiskit_nature.second_q.circuit.library.ansatzes import UCC, UCCSD, PUCCD, SUCCD, CHC, UVCC, UVCCSD
 from qiskit_nature.second_q.circuit.library.initial_states import FermionicGaussianState, HartreeFock, SlaterDeterminant, VSCF
@@ -22,9 +22,14 @@ def run_solver(args, name:str, ctx:Context) -> Union[float, Tuple[float, Circuit
 def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -> float:
   assert GroundStateEigensolver.solve
   raw_res: Result = solver.compute_minimum_eigenvalue(ctx.ham)
-  res = EigenstateResult.from_result(raw_res)
-  if args.disp: print(res)
-  return res.groundenergy + ctx.mol.nuclear_repulsion_energy
+  es_res = EigenstateResult.from_result(raw_res)
+  if isinstance(ctx.mol, Problem):    # PySCFDriver generated
+    res = Problem.interpret(ctx.mol, es_res)
+    if args.disp: print(res)
+    return res.total_energies.item()
+  else:                               # fake
+    if args.disp: print(es_res)
+    return es_res.groundenergy + ctx.mol.nuclear_repulsion_energy
 
 
 # ↓↓↓ classical solvers ↓↓↓

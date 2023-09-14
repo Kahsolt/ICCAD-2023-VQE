@@ -29,6 +29,7 @@ if __name__ == '__main__':
   parser.add_argument('-S', default='Montreal', choices=['Montreal'], help='system model (27 qubits)')
   parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
   # ham
+  parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
   parser.add_argument('--thresh', default=1e-6, type=float, help='ham term trim amplitude thresh')
   # eigensolver
   parser.add_argument('-Y', default='const', choices=['numpy', 'const'], help='classical eigensolver (ref_val)')
@@ -43,6 +44,9 @@ if __name__ == '__main__':
   # misc
   parser.add_argument('--seed', default=170, type=int, help='rand seed')
   args = parser.parse_args()
+
+  if args.H == 'txt': args.H = str(HAM_FILE)
+  if args.H != 'run': assert Path(args.H).is_file(), f'-H {args.H!r} should be a valid file'
 
   seed_everything(args.seed)
 

@@ -11,7 +11,9 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
 
 ⚪ install
 
-- prepare a working Linux system, [PySCF](https://pyscf.org/) **CANNOT** run on Windows!! :(
+- better prepare a working Linux system, since [PySCF](https://pyscf.org/) **CANNOT** run on Windows!! :(
+  - it's also ok to run on Windows, but must use a pre-calculated ham file like [OHhamiltonian.txt](QC-Contest-Demo/Hamiltonian/OHhamiltonian.txt)
+  - and few features are unavailable, no big matter
 - create venv (optional)
   - install [Miniconda](https://docs.conda.io/projects/miniconda/en/latest/) latest
   - `conda create -n qs`
@@ -26,7 +28,12 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
 
 ⚪ run
 
-- `python run.py`
+⚠ for Windows where PySCF is not available, you could **only** run with a pre-calculated ham file
+
+- `python run.py`, the ham will be computed by Qiskit-PySCF (Linux only!)
+- `python run.py -H ham_file` to specify an arbitary pre-calculated ham file
+  - run the contest ham: `python run.py -H txt` or `python run.py -H QC-Contest-Demo\Hamiltonian\OHhamiltonian.txt`
+  - run the ChemiQ pre-computed ham: `python run.py -H playground\run_chq.ham`
 
 
 ### references
