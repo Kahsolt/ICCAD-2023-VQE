@@ -5,22 +5,27 @@
 from __future__ import annotations
 import warnings ; warnings.filterwarnings('ignore', category=DeprecationWarning)
 
+import sys
 import json
 import random
-import numpy as np
 import pickle as pkl
 from time import time
 from pathlib import Path
 from functools import partial
+from datetime import datetime
 from argparse import ArgumentParser, Namespace
 from traceback import print_exc
 from typing import *
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 from qiskit import pulse, transpile
+from qiskit.pulse import ScheduleBlock
 from qiskit.opflow.primitive_ops.pauli_sum_op import PauliSumOp, SparsePauliOp
 from qiskit.circuit import QuantumCircuit as Circuit
 from qiskit.algorithms.optimizers import *
-from qiskit.providers.fake_provider import FakeMontreal
+from qiskit.providers.fake_provider import FakeBackend, FakeMontreal
 from qiskit.utils import algorithm_globals
 from qiskit_aer.noise import NoiseModel
 from qiskit_aer.primitives import Sampler
@@ -40,6 +45,7 @@ REPO_PATH  = BASE_PATH / 'QC-Contest-Demo'
 NOISE_PATH = REPO_PATH / 'NoiseModel'
 HAM_FILE   = REPO_PATH / 'Hamiltonian' / 'OHhamiltonian.txt'
 SEED_FILE  = REPO_PATH / 'algorithm_seeds' / 'requiredseeds.txt'
+LOG_PATH   = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 
 OPTIMZERS = {
   'adam':    lambda args: ADAM           (maxiter=args.maxiter, tol=args.tol),
@@ -87,11 +93,37 @@ def timer(fn:Callable):
     return r
   return wrapper
 
-
 def seed_everything(seed:int):
   random.seed(seed)
   np.random.seed(seed)
   algorithm_globals.random_seed = seed
+
+def gc_everything():
+  import gc, os, psutil
+
+  pid = os.getpid()
+  mem = psutil.Process(pid).memory_info()
+  print(f'[Mem] rss: {mem.rss/2**30:.3f} GB, vms: {mem.vms/2**30:.3f} GB')
+  gc.collect()
+  mem = psutil.Process(pid).memory_info()
+  print(f'[Mem-GC] rss: {mem.rss/2**30:.3f} GB, vms: {mem.vms/2**30:.3f} GB')
+
+
+def load_json(fp:Path, default:Any=dict) -> Dict:
+  if not fp.exists():
+    assert isinstance(default, Callable), '"default" should be a callable'
+    return default()
+  with open(fp, 'r', encoding='utf-8') as fh:
+    return json.load(fh)
+
+def save_json(data:Any, fp:Path):
+  def _cvt(v:Any) -> Any:
+    if isinstance(v, Path): return str(v)
+    if isinstance(v, datetime): return v.isoformat()
+    else: return v
+
+  with open(fp, 'w', encoding='utf-8') as fh:
+    json.dump(data, fh, indent=2, ensure_ascii=False, default=_cvt)
 
 
 def load_ham_file(fp:str) -> SparsePauliOp:
@@ -153,6 +185,11 @@ def load_ham_file(fp:str) -> SparsePauliOp:
   strings = list(terms.keys())    # 'IIIIIIYZZYII'
   coeffs = list(terms.values())   # -0.21924192058109332
   return SparsePauliOp(strings, coeffs)
+
+def load_noise_file(name:str) -> NoiseModel:
+  with open(NOISE_PATH / f'fake{name}.pkl', 'rb') as fh:
+    noise_model_data = pkl.load(fh)
+  return NoiseModel().from_dict(noise_model_data)
 
 
 @timer
@@ -217,16 +254,14 @@ def get_context(args) -> Context:
   return Context(problem, pauli_op)
 
 
-def get_noise_model(name:str) -> NoiseModel:
-  with open(NOISE_PATH / f'fake{name}.pkl', 'rb') as fh:
-    noise_model_data = pkl.load(fh)
-  return NoiseModel().from_dict(noise_model_data)
-
-
 @timer
-def run_pulse(args, ansatz:Circuit) -> float:
-  system_model = globals()[f'Fake{args.S}']()
+def run_pulse(args, ansatz:Circuit) -> Tuple[ScheduleBlock, Circuit]:
+  name = f'Fake{args.S}'
+  system_model: FakeBackend = globals()[name]()
+  fp = LOG_PATH / f'{name}.json'
+  if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
+
   transpiled_ansatz = transpile(ansatz, backend=system_model)
-  with pulse.build(system_model) as prog:
+  with pulse.build(system_model) as schedule:
     pulse.call(transpiled_ansatz)
-  return prog.duration
+  return schedule, transpiled_ansatz

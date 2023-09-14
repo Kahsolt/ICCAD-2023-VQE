@@ -3,24 +3,98 @@
 # Create Time: 2023/09/13
 
 from utils import *
-from solvers import run_solver
+from solvers import run_solver, fxs
+
+
+def exp_cfg(args) -> str:
+  cfg = f'{args.X}_{args.O}_{args.maxiter}'
+  if args.N: cfg += f'_{args.N}'
+  return cfg
+
+def exp_name(args) -> str:
+  ts = datetime.now().isoformat()
+  ts = ts.replace('-', '').replace(':', '').replace('T', '_')
+  ts = ts.split('.')[0]
+  cfg = exp_cfg(args)
+  return f'{ts}@{cfg}'
 
 
 def run(args):
-  ctx = get_context(args)
+  dt_start = datetime.now()
 
-  ref_gs = run_solver(args, args.Y, ctx)
-  print(f'>> ref_gs: {ref_gs:}')
-  mes_gs, ansatz = run_solver(args, args.X, ctx)
-  print(f'>> mes_gs: {mes_gs:}')
+  if 'experiment':
+    ctx = get_context(args)
+  
+    ref_gs = run_solver(args, args.Y, ctx)
+    print(f'>> ref_gs: {ref_gs:}')
+    mes_gs, ansatz = run_solver(args, args.X, ctx)
+    print(f'>> mes_gs: {mes_gs:}')
 
-  err = abs(mes_gs - ref_gs)
-  print(f'>> Error: {err}')
-  err_rate = err / abs(ref_gs)
-  print(f'>> Error Rate: {err_rate:%}')
+    err = abs(mes_gs - ref_gs)
+    print(f'>> Error: {err}')
+    err_rate = err / abs(ref_gs)
+    print(f'>> Error Rate: {err_rate:%}')
 
-  duration = run_pulse(args, ansatz)
-  print(f'>> Duration: {duration}')
+    if args.skip_pulse:
+      schedule = None
+      duration, ansatz_t = None, None
+    else:
+      schedule, ansatz_t = run_pulse(args, ansatz)
+      duration = schedule.duration
+      print(f'>> Duration: {duration}')
+
+  dt_end = datetime.now()
+
+  name: str = args.name or exp_name(args)
+  log_dp = LOG_PATH / name
+  log_dp.mkdir(exist_ok=True)
+
+  if 'pulse' and schedule is not None:
+    with open(log_dp / 'pulse.txt', 'w', encoding='utf-8') as fh:
+      fh.write(str(schedule))
+
+  if 'plot':
+    plt.rcParams['figure.figsize'] = (10, 4)
+    plt.plot(fxs, c='r')
+    plt.ylabel('Energy')
+    plt.suptitle(exp_cfg(args))
+    plt.savefig(log_dp / 'energy.png', dpi=600)
+
+  if 'log':
+    data = {
+      'args': vars(args),
+      'cmd': ' '.join(sys.argv),
+      'tm_start': str(dt_start),
+      'tm_end': str(dt_end),
+      'tm_cost': (dt_end - dt_start).total_seconds(),
+      'metrics': {
+        'ref_gs': ref_gs,
+        'mes_gs': mes_gs,
+        'err': err,
+        'err_rate': err_rate,
+        'duration': duration,
+      },
+      'ansatz': {
+        'n_qubit': ansatz.num_qubits,
+        'n_ancilla': ansatz.num_ancillas,
+        'n_cbit': ansatz.num_clbits,
+        'size': ansatz.size(),
+        'depth': ansatz.depth(),
+        'width': ansatz.width(),
+      },
+    }
+    if ansatz_t is not None:
+      data['transpiled_ansatz'] = {
+        'n_qubit': ansatz_t.num_qubits,
+        'n_ancilla': ansatz_t.num_ancillas,
+        'n_cbit': ansatz_t.num_clbits,
+        'size': ansatz_t.size(),
+        'depth': ansatz_t.depth(),
+        'width': ansatz_t.width(),
+        #'qasm': ansatz_t.qasm(),
+      }
+    
+    save_json(data, log_dp / 'log.json')
 
 
 if __name__ == '__main__':
@@ -43,6 +117,8 @@ if __name__ == '__main__':
   parser.add_argument('--disp', action='store_true', help='optim show verbose result')
   # misc
   parser.add_argument('--seed', default=170, type=int, help='rand seed')
+  parser.add_argument('--skip_pulse', action='store_true', help='skip run_pulse')
+  parser.add_argument('--name', help='experiment name under log folder, default to time-string')
   args = parser.parse_args()
 
   if args.H == 'txt': args.H = str(HAM_FILE)

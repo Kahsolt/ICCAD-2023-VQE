@@ -48,8 +48,12 @@ def solver_numpy(args, ctx:Context) -> float:
 
 # ↓↓↓ quantum solvers ↓↓↓
 
+fxs = []
+
 def optim_callback(args, iter:int, params:Union[List[float], np.ndarray], fx:float, metadata:Dict[str, Any]):
   print(f'>> [{iter} / {args.maxiter}] fx = {fx}')
+  if iter == 0: fxs.clear()
+  fxs.append(fx)
 
 
 @timer
@@ -66,7 +70,7 @@ def solver_vqe(args, ctx:Context) -> Tuple[float, Circuit]:
     ),
     reps=1,
   )
-  noise_model = get_noise_model(args.N) if args.N else None
+  noise_model = load_noise_file(args.N) if args.N else None
   estimator = Estimator(
     backend_options = {
       'method': 'statevector',
