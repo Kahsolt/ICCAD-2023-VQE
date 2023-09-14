@@ -17,6 +17,8 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
   - `conda create -n qs`
   - `conda activate qs`
 - install dependencies `pip install -r requirements.txt`
+- test qiskit installation
+  - `python _tutorial_qiskit_vqe.py`
 - clone the code & data base `git clone https://github.com/qccontest/QC-Contest-Demo`
 - test demo code runnable
   - `python _test_examplecode.py -T 2`; this might be very **slow**, just be patient :(
@@ -32,7 +34,9 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
 - Qiskit
   - tutorial: [https://qiskit.org/documentation/tutorials.html](https://qiskit.org/documentation/tutorials.html)
   - doc: [https://qiskit.org/documentation/apidoc/index.html](https://qiskit.org/documentation/apidoc/index.html)
-  - algorithms: [https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms](https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms)
+  - algorithms
+    - tutorial: [https://qiskit.org/ecosystem/algorithms/tutorials/index.html](https://qiskit.org/ecosystem/algorithms/tutorials/index.html)
+    - code: [https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms](https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms)
 - example code: [https://github.com/qccontest/QC-Contest-Demo](https://github.com/qccontest/QC-Contest-Demo)  
 
 ----
