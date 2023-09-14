@@ -32,7 +32,7 @@ if __name__ == '__main__':
   parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
   parser.add_argument('--thresh', default=1e-6, type=float, help='ham term trim amplitude thresh')
   # eigensolver
-  parser.add_argument('-Y', default='const', choices=['numpy', 'const'], help='classical eigensolver (ref_val)')
+  parser.add_argument('-Y', default='numpy', choices=['numpy', 'const'], help='classical eigensolver (ref_val)')
   parser.add_argument('-X', default='vqe', choices=['vqe', 'adavqe', 'svqe', 'qaoa'], help='quantum eigensolver')
   # ansatz
   parser.add_argument

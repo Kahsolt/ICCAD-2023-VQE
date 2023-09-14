@@ -34,6 +34,8 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
 - `python run.py -H ham_file` to specify an arbitary pre-calculated ham file
   - run the contest ham: `python run.py -H txt` or `python run.py -H QC-Contest-Demo\Hamiltonian\OHhamiltonian.txt`
   - run the ChemiQ pre-computed ham: `python run.py -H playground\run_chq.ham`
+    - this ham seems to be inconsist with the `Qiskit-PySCF` analyzed one, with energy-diff approximately right the value of `nuclear_repulsion_energy`
+    - have no idea about know whether it is a bug or feature :(
 
 
 ### references

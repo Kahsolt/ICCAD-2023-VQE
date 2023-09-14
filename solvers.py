@@ -22,27 +22,28 @@ def run_solver(args, name:str, ctx:Context) -> Union[float, Tuple[float, Circuit
 def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -> float:
   assert GroundStateEigensolver.solve
   raw_res: Result = solver.compute_minimum_eigenvalue(ctx.ham)
-  es_res = EigenstateResult.from_result(raw_res)
+  raw_res = EigenstateResult.from_result(raw_res)
   if isinstance(ctx.mol, Problem):    # PySCFDriver generated
-    res = Problem.interpret(ctx.mol, es_res)
+    res = Problem.interpret(ctx.mol, raw_res)
     if args.disp: print(res)
-    return res.total_energies.item()
+    gs_ene = res.total_energies.item()
   else:                               # fake
-    if args.disp: print(es_res)
-    return es_res.groundenergy + ctx.mol.nuclear_repulsion_energy
+    if args.disp: print(raw_res)
+    gs_ene = raw_res.groundenergy + ctx.mol.nuclear_repulsion_energy
+  return gs_ene
 
 
 # ↓↓↓ classical solvers ↓↓↓
 
 @timer
 def solver_const(args, ctx:Context) -> float:
-  return -74.38714627
+  return -74.3871462681872
 
 
 @timer
 def solver_numpy(args, ctx:Context) -> float:
   solver = NumPyMinimumEigensolver()
-  return GroundStateEigensolver_solve(solver, ctx)
+  return GroundStateEigensolver_solve(args, solver, ctx)
 
 
 # ↓↓↓ quantum solvers ↓↓↓
