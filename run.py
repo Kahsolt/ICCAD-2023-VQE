@@ -102,6 +102,7 @@ if __name__ == '__main__':
   # hardware
   parser.add_argument('-S', default='Montreal', choices=['Montreal'], help='system model (27 qubits)')
   parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
+  parser.add_argument('--shots', default=6000, help='shot-based simulator resource limit')
   # ham
   parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
   parser.add_argument('--thresh', default=1e-6, type=float, help='ham term trim amplitude thresh')

@@ -15,8 +15,6 @@ from qiskit_aer.noise import NoiseModel
 BASE_PATH = Path(__file__).parent.absolute()
 NOISE_MODEL_PATH = BASE_PATH / 'QC-Contest-Demo' / 'NoiseModel'
 
-shots = 6000
-
 
 def run(args):
   # For each noise model, we could design & submit only one optimal circuit (with trained parameters)
@@ -55,7 +53,7 @@ def run(args):
       'noise_model': noise_model,
     },
     run_options = {
-      'shots': shots,
+      'shots': 6000,
       'seed': args.seed,
     },
     skip_transpilation=True,

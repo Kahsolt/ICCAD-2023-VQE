@@ -75,8 +75,6 @@ OPTIMZERS = {
   'umda':    lambda args: UMDA           (maxiter=args.maxiter),
 }
 
-# NOTE: fixed as the contest required
-shots = 6000
 # NOTE: required seeds to average
 with open(SEED_FILE, 'r', encoding='utf-8') as fh:
   lines = fh.read().strip().replace(',', '').split('\n')

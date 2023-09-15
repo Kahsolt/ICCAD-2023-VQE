@@ -81,7 +81,7 @@ def solver_vqe(args, ctx:Context) -> Tuple[float, Circuit]:
       'seed_transpiler': args.seed,
     },
     run_options = {
-      'shots': shots,
+      'shots': args.shots,
       'seed': args.seed,
     },
   )

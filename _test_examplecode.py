@@ -36,8 +36,6 @@ OPTIMZERS = {
 
 BASE_PATH = Path(__file__).parent.absolute()
 
-shots = 6000
-
 
 def get_mol(args) -> Tuple[Molecular, Mapper]:
   ultra_simplified_ala_string = '''
@@ -166,7 +164,7 @@ def solver_vqe(args, mol:Molecular, mapper:Mapper) -> Tuple[float, QuantumCircui
       #'noise_model': noise_model,
     },
     run_options = {
-      'shots': shots,
+      'shots': 6000,
       'seed': args.seed,
     },
     transpile_options = {
