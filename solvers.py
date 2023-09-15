@@ -74,7 +74,7 @@ def solver_vqe(args, ctx:Context) -> Tuple[float, Circuit]:
   estimator = Estimator(
     backend_options = {
       'method': 'statevector',
-      'device': 'CPU',
+      'device': args.device,
       'noise_model': noise_model,
     },
     transpile_options = {

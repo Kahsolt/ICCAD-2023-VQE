@@ -27,6 +27,7 @@ from qiskit.circuit import QuantumCircuit as Circuit
 from qiskit.algorithms.optimizers import *
 from qiskit.providers.fake_provider import FakeBackend, FakeMontreal
 from qiskit.utils import algorithm_globals
+from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel
 from qiskit_aer.primitives import Sampler
 import qiskit_nature ; qiskit_nature.settings.use_pauli_sum_op = False
@@ -48,6 +49,9 @@ HAM_FILE   = REPO_PATH / 'Hamiltonian' / 'OHhamiltonian.txt'
 SEED_FILE  = REPO_PATH / 'algorithm_seeds' / 'requiredseeds.txt'
 LOG_PATH   = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 
+# https://qiskit.org/ecosystem/aer/stubs/qiskit_aer.AerSimulator.html
+SIMULATORS = ['automatic', 'statevector', 'density_matrix', 'stabilizer', 'matrix_product_state', 'extended_stabilizer', 'unitary', 'superop']
+# https://qiskit.org/documentation/stubs/qiskit.algorithms.optimizers.html
 OPTIMZERS = {
   'adam':    lambda args: ADAM           (maxiter=args.maxiter, tol=args.tol),
   'adam_ag': lambda args: ADAM           (maxiter=args.maxiter, tol=args.tol, amsgrad=True),

@@ -54,6 +54,7 @@ baseline quant cfg: vqe-uccsd-cobyla(10)
   - `conda create -n qs`
   - `conda activate qs`
 - install dependencies `pip install -r requirements.txt`
+  - if you have CUDA on Linux, one more cmdline: `pip install qiskit-aer-gpu`
 - test qiskit installation
   - `python _tutorial_qiskit_vqe.py`
 - clone the code & data base `git clone https://github.com/qccontest/QC-Contest-Demo`
@@ -81,7 +82,11 @@ baseline quant cfg: vqe-uccsd-cobyla(10)
   - algorithms
     - tutorial: [https://qiskit.org/ecosystem/algorithms/tutorials/index.html](https://qiskit.org/ecosystem/algorithms/tutorials/index.html)
     - code: [https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms](https://github.com/Qiskit/qiskit-tutorials/tree/master/tutorials/algorithms)
-- example code: [https://github.com/qccontest/QC-Contest-Demo](https://github.com/qccontest/QC-Contest-Demo)  
+- Qiskit ecosystem
+  - index: [https://qiskit.org/ecosystem/](https://qiskit.org/ecosystem/)
+  - qiskit-aer: [https://github.com/Qiskit/qiskit-aer](https://github.com/Qiskit/qiskit-aer)
+  - qiskit-nature-pyscf: [https://github.com/qiskit-community/qiskit-nature-pyscf](https://github.com/qiskit-community/qiskit-nature-pyscf)
+- base code repo: [https://github.com/qccontest/QC-Contest-Demo](https://github.com/qccontest/QC-Contest-Demo)  
 
 ----
 by Armit
