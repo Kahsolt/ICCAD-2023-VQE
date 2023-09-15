@@ -49,11 +49,10 @@ print('=' * 72)
 ''' Chapter 3: VQE with Qiskit Aer Primitives '''
 
 # classical solver
-from qiskit.opflow import PauliSumOp
 from qiskit.algorithms.minimum_eigensolvers import NumPyMinimumEigensolver
 
 numpy_solver = NumPyMinimumEigensolver()
-result = numpy_solver.compute_minimum_eigenvalue(PauliSumOp(H2_op))
+result = numpy_solver.compute_minimum_eigenvalue(H2_op)
 ref_value = result.eigenvalue.real
 print(f'Reference value: {ref_value:.5f}')
 

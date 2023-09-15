@@ -22,13 +22,14 @@ import matplotlib.pyplot as plt
 
 from qiskit import pulse, transpile
 from qiskit.pulse import ScheduleBlock
-from qiskit.opflow.primitive_ops.pauli_sum_op import PauliSumOp, SparsePauliOp
+from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit import QuantumCircuit as Circuit
 from qiskit.algorithms.optimizers import *
 from qiskit.providers.fake_provider import FakeBackend, FakeMontreal
 from qiskit.utils import algorithm_globals
 from qiskit_aer.noise import NoiseModel
 from qiskit_aer.primitives import Sampler
+import qiskit_nature ; qiskit_nature.settings.use_pauli_sum_op = False
 from qiskit_nature.units import DistanceUnit
 from qiskit_nature.second_q.drivers import PySCFDriver
 from qiskit_nature.second_q.drivers.pyscfd.pyscfdriver import ElectronicStructureProblem
@@ -231,10 +232,10 @@ def get_context(args) -> Context:
 
     mapper = JordanWignerMapper()
     if 'new API':
-      qubit_op: PauliSumOp = mapper.map(fermi_op)
+      qubit_op: SparsePauliOp = mapper.map(fermi_op)
     else:
       converter = QubitConverter(mapper=mapper, two_qubit_reduction=True, sort_operators=True)
-      qubit_op: PauliSumOp = converter.convert(fermi_op)   # pauli
+      qubit_op: SparsePauliOp = converter.convert(fermi_op)   # pauli
     print('   n_qubits:', qubit_op.num_qubits)      # 12
     pauli_op: SparsePauliOp = qubit_op.primitive
   else:
