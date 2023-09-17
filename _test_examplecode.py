@@ -42,6 +42,9 @@ def get_mol(args) -> Tuple[Molecular, Mapper]:
   O 0.0 0.0 0.0
   H 0.45 -0.1525 -0.8454
   '''
+  # NOTE: de facto this is OH+, not the desired OH-
+  # but may it be the Qiskit bug, the pauli coeffs are not different either charge=+1/-1
+  # the contest group figured out this mistake, and decided to let it be :)
   driver = PySCFDriver(
     atom=ultra_simplified_ala_string.strip(),
     basis='sto3g',
