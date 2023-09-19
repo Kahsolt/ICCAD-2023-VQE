@@ -79,6 +79,29 @@ OPTIMZERS = {
   'imfil':   lambda args: IMFIL          (maxiter=args.maxiter),
   'umda':    lambda args: UMDA           (maxiter=args.maxiter),
 }
+# https://qiskit.org/ecosystem/nature/apidocs/qiskit_nature.second_q.circuit.library.html
+ANSATZS = [
+  'uccs',
+  'uccd',
+  'uccsd',
+  'uccst',
+  'uccdt',
+  'uccsdt',
+
+  'uvccs',
+  'uvccd',
+  'uvccsd',
+  'uvccst',
+  'uvccdt',
+  'uvccsdt',
+
+  'puccd',
+  'succd',
+
+  'chccs',
+  'chccd',
+  'chccsd',
+]
 
 # NOTE: required seeds to average
 with open(SEED_FILE, 'r', encoding='utf-8') as fh:

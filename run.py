@@ -7,7 +7,7 @@ from solvers import run_solver, fxs
 
 
 def exp_cfg(args) -> str:
-  cfg = f'{args.X}_{args.O}_{args.maxiter}'
+  cfg = f'{args.X}_{args.ansatz}_{args.init}_{args.reps}_{args.O}_{args.maxiter}'
   if args.N: cfg += f'_{args.N}'
   return cfg
 
@@ -111,7 +111,9 @@ if __name__ == '__main__':
   parser.add_argument('-Y', default='numpy', choices=['numpy', 'const'], help='classical eigensolver (ref_val)')
   parser.add_argument('-X', default='vqe', choices=['vqe', 'adavqe', 'svqe', 'qaoa'], help='quantum eigensolver')
   # ansatz
-  parser.add_argument
+  parser.add_argument('-A', '--ansatz', default='uccsd', choices=ANSATZS, help='ansatz model')
+  parser.add_argument('-I', '--init',   default='zeros', choices=['zeros', 'randu', 'randn'], help='ansatz param init')
+  parser.add_argument('--reps', default=1, help='ansatz circuit n_repeats')
   # optim
   parser.add_argument('-O', default='cobyla', choices=OPTIMZERS.keys(), help='optim method')
   parser.add_argument('-T', '--maxiter', default=10, type=int, help='optim maxiter')
