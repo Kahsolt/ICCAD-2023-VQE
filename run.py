@@ -36,22 +36,21 @@ def run(args):
     print(f'>> Error Rate: {err_rate:%}')
 
     if args.skip_pulse:
-      schedule = None
-      duration, ansatz_t = None, None
+      mes_gs_t, ansatz_t, duration = None, None, None
+      err_t, err_rate_t = None, None
     else:
-      schedule, ansatz_t = run_pulse(args, ansatz)
-      duration = schedule.duration
+      mes_gs_t, ansatz_t, duration = run_pulse(args, ansatz, ctx.ham)
       print(f'>> Duration: {duration}')
+      err_t = abs(mes_gs_t - ref_gs)
+      print(f'>> Error (pulse): {err_t}')
+      err_rate_t = err_t / abs(ref_gs)
+      print(f'>> Error Rate (pulse): {err_rate_t:%}')
 
   dt_end = datetime.now()
 
   name: str = args.name or exp_name(args)
   log_dp = LOG_PATH / name
   log_dp.mkdir(exist_ok=True)
-
-  if 'pulse' and schedule is not None:
-    with open(log_dp / 'pulse.txt', 'w', encoding='utf-8') as fh:
-      fh.write(str(schedule))
 
   if 'plot':
     plt.rcParams['figure.figsize'] = (10, 4)
@@ -84,6 +83,7 @@ def run(args):
       },
     }
     if ansatz_t is not None:
+      ansatz_t: Circuit
       data['transpiled_ansatz'] = {
         'n_qubit': ansatz_t.num_qubits,
         'n_ancilla': ansatz_t.num_ancillas,
@@ -93,7 +93,7 @@ def run(args):
         'width': ansatz_t.width(),
         #'qasm': ansatz_t.qasm(),
       }
-    
+
     save_json(data, log_dp / 'log.json')
 
 
@@ -104,6 +104,7 @@ if __name__ == '__main__':
   parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
   parser.add_argument('--simulator', default='automatic', choices=SIMULATORS, help='qiskit_aer simulator method')
   parser.add_argument('--shots', default=6000, help='shot-based simulator resource limit')
+  parser.add_argument('--skip_pulse', action='store_true', help='skip run real backend noisy simulation')
   # ham
   parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
   parser.add_argument('--thresh', default=1e-6, type=float, help='ham term trim amplitude thresh')
@@ -112,7 +113,7 @@ if __name__ == '__main__':
   parser.add_argument('-X', default='vqe', choices=['vqe', 'adavqe', 'svqe', 'qaoa'], help='quantum eigensolver')
   # ansatz
   parser.add_argument('-A', '--ansatz', default='uccsd', choices=ANSATZS, help='ansatz model')
-  parser.add_argument('-I', '--init',   default='zeros', choices=['zeros', 'randu', 'randn'], help='ansatz param init')
+  parser.add_argument('-I', '--init',   default='auto', choices=INITS, help='ansatz param init')
   parser.add_argument('--reps', default=1, help='ansatz circuit n_repeats')
   # optim
   parser.add_argument('-O', default='cobyla', choices=OPTIMZERS.keys(), help='optim method')
@@ -121,7 +122,6 @@ if __name__ == '__main__':
   parser.add_argument('--disp', action='store_true', help='optim show verbose result')
   # misc
   parser.add_argument('--seed', default=170, type=int, help='rand seed')
-  parser.add_argument('--skip_pulse', action='store_true', help='skip run_pulse')
   parser.add_argument('--name', help='experiment name under log folder, default to time-string')
   args = parser.parse_args()
 

@@ -3,12 +3,6 @@
 :baseline
 python run.py -H txt
 
-:noisy
-REM These do NOT run, consuming 100% CPU, do not know why :(
-python run.py -H txt -N cairo
-python run.py -H txt -N kolkata
-python run.py -H txt -N montreal
-
 :less_shots
 python run.py -H txt --shots 3000
 python run.py -H txt --shots 1000
@@ -46,17 +40,17 @@ python run.py -H txt -A uccst
 python run.py -H txt -A uccdt
 python run.py -H txt -A uccsdt
 
-python run.py -H txt -A uvccs
-python run.py -H txt -A uvccd
-python run.py -H txt -A uvccsd
-python run.py -H txt -A uvccst
-python run.py -H txt -A uvccdt
-python run.py -H txt -A uvccsdt
+python run.py -H txt -A puccd
+python run.py -H txt -A succd
 
 python run.py -H txt -A chccs
 python run.py -H txt -A chccd
 python run.py -H txt -A chccsd
 
 :init
+python run.py -H txt -I hf
+python run.py -H txt -I mp2
+python run.py -H txt -I none
+python run.py -H txt -I zeros
 python run.py -H txt -I randu
 python run.py -H txt -I randn

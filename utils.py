@@ -25,22 +25,30 @@ from qiskit.pulse import ScheduleBlock
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.circuit import QuantumCircuit as Circuit
 from qiskit.algorithms.optimizers import *
-from qiskit.providers.fake_provider import FakeBackend, FakeMontreal
+from qiskit.algorithms.minimum_eigensolvers import VQEResult, AdaptVQEResult, SamplingVQEResult, NumPyMinimumEigensolverResult
+from qiskit.providers import JobV1 as Job
+from qiskit.providers.fake_provider import FakeBackend, FakeCairo, FakeKolkata, FakeMontreal
 from qiskit.utils import algorithm_globals
 from qiskit_aer import AerSimulator
+from qiskit_aer.primitives import Estimator, Sampler
 from qiskit_aer.noise import NoiseModel
-from qiskit_aer.primitives import Sampler
 import qiskit_nature ; qiskit_nature.settings.use_pauli_sum_op = False
 from qiskit_nature.units import DistanceUnit
-from qiskit_nature.second_q.drivers import PySCFDriver
-from qiskit_nature.second_q.drivers.pyscfd.pyscfdriver import ElectronicStructureProblem
-from qiskit_nature.second_q.operators.fermionic_op import FermionicOp
+from qiskit_nature.second_q.drivers.pyscfd.pyscfdriver import PySCFDriver, ElectronicStructureProblem
 from qiskit_nature.second_q.hamiltonians import ElectronicEnergy
+from qiskit_nature.second_q.operators.fermionic_op import FermionicOp
 from qiskit_nature.second_q.mappers import JordanWignerMapper, QubitConverter
+from qiskit_nature.second_q.algorithms.initial_points import HFInitialPoint, MP2InitialPoint, VSCFInitialPoint
+from qiskit_nature.second_q.circuit.library.ansatzes import UCC, UCCSD, PUCCD, SUCCD, CHC, UVCC, UVCCSD
+from qiskit_nature.second_q.circuit.library.ansatzes.utils import generate_vibration_excitations
+from qiskit_nature.second_q.circuit.library.initial_states import HartreeFock, FermionicGaussianState, SlaterDeterminant, VSCF
 
 Problem = ElectronicStructureProblem
 Hamiltonian = SparsePauliOp
 Context = NamedTuple('Context', [('mol', Union[Problem, Namespace]), ('ham', Hamiltonian)])
+Result = Union[NumPyMinimumEigensolverResult, VQEResult, AdaptVQEResult, SamplingVQEResult]
+Params = np.ndarray
+Options = Dict[str, Any]
 
 BASE_PATH  = Path(__file__).parent.absolute()
 REPO_PATH  = BASE_PATH / 'QC-Contest-Demo'
@@ -101,6 +109,18 @@ ANSATZS = [
   'chccs',
   'chccd',
   'chccsd',
+]
+# https://qiskit.org/ecosystem/nature/apidocs/qiskit_nature.second_q.algorithms.initial_points.html
+INITS = [
+  'auto',
+  'hf',
+  'mp2',
+  'vscf',
+  'none',
+  'zeros',
+  'noise',
+  'randu',
+  'randn',
 ]
 
 # NOTE: required seeds to average
@@ -259,12 +279,11 @@ def get_context(args) -> Context:
 
     mapper = JordanWignerMapper()
     if 'new API':
-      qubit_op: SparsePauliOp = mapper.map(fermi_op)
+      pauli_op: SparsePauliOp = mapper.map(fermi_op)
     else:
       converter = QubitConverter(mapper=mapper, two_qubit_reduction=True, sort_operators=True)
-      qubit_op: SparsePauliOp = converter.convert(fermi_op)   # pauli
-    print('   n_qubits:', qubit_op.num_qubits)      # 12
-    pauli_op: SparsePauliOp = qubit_op.primitive
+      pauli_op: SparsePauliOp = converter.convert(fermi_op)   # pauli
+    print('   n_qubits:', pauli_op.num_qubits)      # 12
   else:
     pauli_op = load_ham_file(args.H)
 
@@ -280,14 +299,164 @@ def get_context(args) -> Context:
   return Context(problem, pauli_op)
 
 
+def _get_primitive_options(args, noisy:bool=False, transpile:bool=True) -> Options:
+  options = {
+    'backend_options': {     # the backend hardware
+      'method': args.simulator,
+      'device': args.device,
+      'noise_model': load_noise_file(args.N) if (noisy and args.N) else None,
+    },
+    'transpile_options': {   # compile the circuit to backend hardware
+      'seed_transpiler': args.seed,
+    },
+    'run_options': {         # run the measurement
+      'shots': args.shots,
+      'seed': args.seed,
+    },
+    'skip_transpilation': not transpile,
+  }
+  return options
+
+def get_estimator(args, options:Options=None) -> Estimator:
+  ''' Estimator is a runtime primitive, handling multiple circuits '''
+  # the virtual/physical machine env to run the circuit
+  return Estimator(**(options or _get_primitive_options(args)))
+
+def get_sampler(args, options:Options=None) -> Sampler:
+  ''' Sampler is a light-weight runtime primitive, handling one circuit '''
+  return Sampler(**(options or _get_primitive_options(args)))
+
+
+def get_ansatz(args, ctx:Context) -> Tuple[Circuit, Params]:
+  # ansatz
+  mapper = JordanWignerMapper()
+  if args.ansatz.startswith('ucc'):
+    ucc_type = args.ansatz[3:]
+    ansatz = UCC(
+      ctx.mol.num_spatial_orbitals,   # 6
+      ctx.mol.num_particles,          # (4, 4)
+      ucc_type,
+      mapper,
+      reps=args.reps,
+      initial_state=HartreeFock(
+        ctx.mol.num_spatial_orbitals,
+        ctx.mol.num_particles,
+        mapper,
+      ),
+    )
+  elif args.ansatz.startswith('uvcc'):    # NOTE: this does not work due to not support JordanWignerMapper :(
+    uvcc_type = args.ansatz[4:]
+    ansatz = UVCC(
+      ctx.mol.num_particles,          # (4, 4)
+      uvcc_type,
+      mapper,
+      reps=args.reps,
+      initial_state=VSCF(
+        ctx.mol.num_particles,
+        mapper,
+      ),
+    )
+  elif args.ansatz == 'puccd':    # only for single-spin system
+    ansatz = PUCCD(
+      ctx.mol.num_spatial_orbitals,   # 6
+      ctx.mol.num_particles,          # (4, 4)
+      mapper,
+      reps=args.reps,
+      initial_state=HartreeFock(
+        ctx.mol.num_spatial_orbitals,
+        ctx.mol.num_particles,
+        mapper,
+      ),
+    )
+  elif args.ansatz == 'succd':    # only for single-spin system
+    ansatz = SUCCD(
+      ctx.mol.num_spatial_orbitals,   # 6
+      ctx.mol.num_particles,          # (4, 4)
+      mapper,
+      reps=args.reps,
+      initial_state=HartreeFock(
+        ctx.mol.num_spatial_orbitals,
+        ctx.mol.num_particles,
+        mapper,
+      ),
+    )
+  elif args.ansatz.startswith('chc'):      # approx UCC with less CNOT
+    chc_type = args.ansatz[3:]
+    excitations = [
+      *(generate_vibration_excitations(1, ctx.mol.num_particles) if 's' in chc_type else []),
+      *(generate_vibration_excitations(2, ctx.mol.num_particles) if 'd' in chc_type else []),
+    ]
+    ansatz = CHC(
+      ctx.ham.num_qubits,
+      excitations,
+      reps=args.reps,
+      initial_state=HartreeFock(
+        ctx.mol.num_spatial_orbitals,
+        ctx.mol.num_particles,
+        mapper,
+      )
+    )
+  else: raise ValueError(f'unknown ansatz {args.ansatz}')
+
+  # override init
+  if args.init == 'auto':
+    if   isinstance(ansatz, UCC):  args.init = 'hf'
+    elif isinstance(ansatz, UVCC): args.init = 'vscf'
+    else: args.init = 'none'
+
+  # init params point with theories (not the init |state>)
+  init = None
+  if   args.init == 'hf':
+    hf_initial_point = HFInitialPoint()
+    hf_initial_point.ansatz = ansatz
+    hf_initial_point.problem = ctx.mol
+    init = hf_initial_point.to_numpy_array()
+  elif args.init == 'mp2':
+    mp2_initial_point = MP2InitialPoint()
+    mp2_initial_point.ansatz = ansatz
+    mp2_initial_point.problem = ctx.mol
+    init = mp2_initial_point.to_numpy_array()
+  elif args.init == 'vscf':
+    vscf_initial_point = VSCFInitialPoint()
+    vscf_initial_point.ansatz = ansatz
+    vscf_initial_point.problem = ctx.mol
+    init = vscf_initial_point.to_numpy_array()
+  # other init without theories
+  n_params = ansatz.num_parameters
+  if   args.init == 'none':  pass
+  elif args.init == 'zeros': init = np.zeros(shape=[n_params])
+  elif args.init == 'noise': init = np.random.uniform(low=-1e-5, high=1e-5, size=[n_params])
+  elif args.init == 'randu': init = np.random.uniform(low=-np.pi/4, high=np.pi/4, size=[n_params])
+  elif args.init == 'randn': init = np.random.normal(loc=0, scale=0.2, size=[n_params])
+  return ansatz, init
+
+
+def get_optimizer(args, ansatz:Circuit) -> Optimizer:
+  optim_cls = OPTIMZERS[args.O]
+  optimizer = optim_cls(args, ansatz) if args.O == 'qnspsa' else optim_cls(args)
+  return optimizer
+
+
 @timer
-def run_pulse(args, ansatz:Circuit) -> Tuple[ScheduleBlock, Circuit]:
+def run_pulse(args, ansatz:Circuit, ham:Hamiltonian) -> Tuple[float, Circuit, int]:
+  ''' real backend config noisy simulatoion '''
+
   name = f'Fake{args.S}'
   system_model: FakeBackend = globals()[name]()
-  fp = LOG_PATH / f'{name}.json'
-  if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
 
-  transpiled_ansatz = transpile(ansatz, backend=system_model)
+  if 'save device info':
+    fp = LOG_PATH / f'{name}.json'
+    if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
+
+  transpiled_circuit = transpile(ansatz, backend=system_model)
+  estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=False))
+  job: Job = estimator.run(transpiled_circuit, ham)
+  result = job.result()
+  print('result:', result)
+
+  breakpoint()
+
   with pulse.build(system_model) as schedule:
-    pulse.call(transpiled_ansatz)
-  return schedule, transpiled_ansatz
+    schedule: ScheduleBlock
+    pulse.call(transpiled_circuit)
+  return result, transpiled_circuit, schedule.duration
