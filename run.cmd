@@ -43,9 +43,9 @@ python run.py -H txt -A uccsdt
 python run.py -H txt -A puccd
 python run.py -H txt -A succd
 
-python run.py -H txt -A chccs
-python run.py -H txt -A chccd
-python run.py -H txt -A chccsd
+python run.py -H txt -A chcs
+python run.py -H txt -A chcd
+python run.py -H txt -A chcsd
 
 :init
 python run.py -H txt -I hf

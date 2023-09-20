@@ -80,6 +80,7 @@ def run(args):
         'size': ansatz.size(),
         'depth': ansatz.depth(),
         'width': ansatz.width(),
+        'qasm': ansatz.qasm(),
       },
     }
     if ansatz_t is not None:
@@ -91,7 +92,7 @@ def run(args):
         'size': ansatz_t.size(),
         'depth': ansatz_t.depth(),
         'width': ansatz_t.width(),
-        #'qasm': ansatz_t.qasm(),
+        'qasm': ansatz_t.qasm(),
       }
 
     save_json(data, log_dp / 'log.json')

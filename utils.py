@@ -22,7 +22,8 @@ import matplotlib.pyplot as plt
 
 from qiskit import pulse, transpile
 from qiskit.pulse import ScheduleBlock
-from qiskit.quantum_info import SparsePauliOp
+from qiskit.primitives import EstimatorResult
+from qiskit.quantum_info import SparsePauliOp, Pauli
 from qiskit.circuit import QuantumCircuit as Circuit
 from qiskit.algorithms.optimizers import *
 from qiskit.algorithms.minimum_eigensolvers import VQEResult, AdaptVQEResult, SamplingVQEResult, NumPyMinimumEigensolverResult
@@ -108,9 +109,9 @@ ANSATZS = [
   'puccd',
   'succd',
 
-  'chccs',
-  'chccd',
-  'chccsd',
+  'chcs',
+  'chcd',
+  'chcsd',
 ]
 # https://qiskit.org/ecosystem/nature/apidocs/qiskit_nature.second_q.algorithms.initial_points.html
 INITS = [
@@ -319,7 +320,7 @@ def get_context(args) -> Context:
   return Context(problem, pauli_op)
 
 
-def _get_primitive_options(args, noisy:bool=False, transpile:bool=True) -> Options:
+def _get_primitive_options(args, noisy:bool=True, transpile:bool=True) -> Options:
   options = {
     'backend_options': {     # the backend hardware
       'method': args.simulator,
@@ -450,6 +451,18 @@ def get_ansatz(args, ctx:Context) -> Tuple[Circuit, Params]:
   elif args.init == 'randn': init = np.random.normal(loc=0, scale=0.2, size=[n_params])
   return ansatz, init
 
+def remove_idle_qwires(circ:Circuit) -> Circuit:
+  # https://quantumcomputing.stackexchange.com/questions/25672/remove-inactive-qubits-from-qiskit-circuit
+  from qiskit.converters import circuit_to_dag, dag_to_circuit
+  from collections import OrderedDict
+  dag = circuit_to_dag(circ)
+  idle_wires = list(dag.idle_wires())
+  for w in idle_wires:
+    dag._remove_idle_wire(w)
+    dag.qubits.remove(w)
+  dag.qregs = OrderedDict()
+  return dag_to_circuit(dag)
+
 
 def get_optimizer(args, ansatz:Circuit) -> Optimizer:
   optim_cls = OPTIMZERS[args.O]
@@ -468,15 +481,29 @@ def run_pulse(args, ansatz:Circuit, ham:Hamiltonian) -> Tuple[float, Circuit, in
     fp = LOG_PATH / f'{name}.json'
     if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
 
-  transpiled_circuit = transpile(ansatz, backend=system_model)
-  estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=False))
-  job: Job = estimator.run(transpiled_circuit, ham)
-  result = job.result()
-  print('result:', result)
+  if 'noiseless simulation':
+    estimator = get_estimator(args)
+    job: Job = estimator.run(ansatz, ham)
+    result: EstimatorResult = job.result()
+    ene_gs = result.experiments[0]['values']
+    print('>> noiseless simulation:', ene_gs)
 
-  breakpoint()
+  if 'noisy simulation':
+    transpiled_circuit = transpile(ansatz, backend=system_model, seed_transpiler=args.seed)
+    #transpiled_circuit = remove_idle_qwires(transpiled_circuit)
+    if 'expand `ham` num_qubits to match `transpiled_circuit`':
+      n_qubits_ex = transpiled_circuit.num_qubits - ham.num_qubits
+      Is = 'I' * n_qubits_ex
+      paulis: List[Pauli] = [p.expand(Is) for p in ham.paulis]
+      ham_ex = Hamiltonian(paulis, ham.coeffs)
+    assert ham_ex.num_qubits == transpiled_circuit.num_qubits
+    estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=False))
+    job: Job = estimator.run(transpiled_circuit, ham_ex)
+    result: EstimatorResult = job.result()
+    ene_gs = result.experiments[0]['values']
+    print('>> noisy simulation:', ene_gs)
 
   with pulse.build(system_model) as schedule:
     schedule: ScheduleBlock
     pulse.call(transpiled_circuit)
-  return result, transpiled_circuit, schedule.duration
+  return ene_gs, transpiled_circuit, schedule.duration
