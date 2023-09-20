@@ -36,6 +36,7 @@ import qiskit_nature ; qiskit_nature.settings.use_pauli_sum_op = False
 from qiskit_nature.units import DistanceUnit
 from qiskit_nature.second_q.drivers.pyscfd.pyscfdriver import PySCFDriver, ElectronicStructureProblem
 from qiskit_nature.second_q.hamiltonians import ElectronicEnergy
+from qiskit_nature.second_q.operators import PolynomialTensor, ElectronicIntegrals
 from qiskit_nature.second_q.operators.fermionic_op import FermionicOp
 from qiskit_nature.second_q.mappers import JordanWignerMapper, QubitConverter
 from qiskit_nature.second_q.algorithms.initial_points import HFInitialPoint, MP2InitialPoint, VSCFInitialPoint
@@ -45,7 +46,7 @@ from qiskit_nature.second_q.circuit.library.initial_states import HartreeFock, F
 
 Problem = ElectronicStructureProblem
 Hamiltonian = SparsePauliOp
-Context = NamedTuple('Context', [('mol', Union[Problem, Namespace]), ('ham', Hamiltonian)])
+Context = NamedTuple('Context', [('mol', Problem), ('ham', Hamiltonian)])
 Result = Union[NumPyMinimumEigensolverResult, VQEResult, AdaptVQEResult, SamplingVQEResult]
 Params = np.ndarray
 Options = Dict[str, Any]
@@ -55,6 +56,7 @@ REPO_PATH  = BASE_PATH / 'QC-Contest-Demo'
 NOISE_PATH = REPO_PATH / 'NoiseModel'
 HAM_FILE   = REPO_PATH / 'Hamiltonian' / 'OHhamiltonian.txt'
 SEED_FILE  = REPO_PATH / 'algorithm_seeds' / 'requiredseeds.txt'
+INTG_FILE  = BASE_PATH / 'integrals.pkl'
 LOG_PATH   = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 
 # https://qiskit.org/ecosystem/aer/stubs/qiskit_aer.AerSimulator.html
@@ -255,12 +257,30 @@ def get_context(args) -> Context:
       unit=DistanceUnit.ANGSTROM,
     )
     problem = driver.run()
+
+    if not INTG_FILE.exists():
+      print('<< cache the integrals on Linux :)')
+      integrals = problem.hamiltonian.electronic_integrals
+      tensor_to_numpy = lambda x: { k: v.array for k, v in x._data.items() }
+      integral_parts = {
+        'alpha':      tensor_to_numpy(integrals.alpha),
+        'beta':       tensor_to_numpy(integrals.beta),
+        'beta_alpha': tensor_to_numpy(integrals.beta_alpha),
+      }
+      with open(INTG_FILE, 'wb') as fh:
+        pkl.dump(integral_parts, fh)
   else:
     print('<< make a dummy problem on Windows :)')
-    problem = Namespace     # make a fake object
+    with open(INTG_FILE, 'rb') as fh:
+      raw_integral_parts: Dict[str, Dict[str, np.ndarray]] = pkl.load(fh)
+    integral_parts = { k: PolynomialTensor(v) for k, v in raw_integral_parts.items() }
+    integrals = ElectronicIntegrals(**integral_parts)
+    energy = ElectronicEnergy(integrals, constants={
+      'nuclear_repulsion_energy': 4.36537496654537,
+    })
+    problem = ElectronicStructureProblem(energy)
     problem.num_spatial_orbitals = 6
     problem.num_particles = (4, 4)
-    problem.nuclear_repulsion_energy = 4.36537496654537
 
   print('[mol]')
   print('   n_spatial_orbitals:',       problem.num_spatial_orbitals)       # 6
