@@ -32,6 +32,7 @@ def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -
   else:
     return gs_ene
 
+
 # ↓↓↓ classical solvers ↓↓↓
 
 @timer

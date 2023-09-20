@@ -25,6 +25,7 @@ from qiskit.pulse import ScheduleBlock
 from qiskit.primitives import EstimatorResult
 from qiskit.quantum_info import SparsePauliOp, Pauli
 from qiskit.circuit import QuantumCircuit as Circuit
+from qiskit.circuit.quantumregister import Qubit, QuantumRegister
 from qiskit.algorithms.optimizers import *
 from qiskit.algorithms.minimum_eigensolvers import VQEResult, AdaptVQEResult, SamplingVQEResult, NumPyMinimumEigensolverResult
 from qiskit.providers import JobV1 as Job
@@ -51,6 +52,7 @@ Context = NamedTuple('Context', [('mol', Problem), ('ham', Hamiltonian)])
 Result = Union[NumPyMinimumEigensolverResult, VQEResult, AdaptVQEResult, SamplingVQEResult]
 Params = np.ndarray
 Options = Dict[str, Any]
+QubitMapping = Dict[int, int]
 
 BASE_PATH  = Path(__file__).parent.absolute()
 REPO_PATH  = BASE_PATH / 'QC-Contest-Demo'
@@ -348,6 +350,15 @@ def get_sampler(args, options:Options=None) -> Sampler:
   return Sampler(**(options or _get_primitive_options(args)))
 
 
+def get_backend(args) -> FakeBackend:
+  name = f'Fake{args.S}'
+  system_model: FakeBackend = globals()[name]()
+  if 'save device info':
+    fp = LOG_PATH / f'{name}.json'
+    if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
+  return system_model
+
+
 def get_ansatz(args, ctx:Context) -> Tuple[Circuit, Params]:
   # ansatz
   mapper = JordanWignerMapper()
@@ -423,7 +434,7 @@ def get_ansatz(args, ctx:Context) -> Tuple[Circuit, Params]:
   if args.init == 'auto':
     if   isinstance(ansatz, UCC):  args.init = 'hf'
     elif isinstance(ansatz, UVCC): args.init = 'vscf'
-    else: args.init = 'none'
+    else: args.init = 'zeros'
 
   # init params point with theories (not the init |state>)
   init = None
@@ -449,9 +460,9 @@ def get_ansatz(args, ctx:Context) -> Tuple[Circuit, Params]:
   elif args.init == 'noise': init = np.random.uniform(low=-1e-5, high=1e-5, size=[n_params])
   elif args.init == 'randu': init = np.random.uniform(low=-np.pi/4, high=np.pi/4, size=[n_params])
   elif args.init == 'randn': init = np.random.normal(loc=0, scale=0.2, size=[n_params])
-  return ansatz, init
+  return ansatz.decompose(), init
 
-def remove_idle_qwires(circ:Circuit) -> Circuit:
+def _remove_idle_qwires(circ:Circuit) -> Circuit:
   # https://quantumcomputing.stackexchange.com/questions/25672/remove-inactive-qubits-from-qiskit-circuit
   from qiskit.converters import circuit_to_dag, dag_to_circuit
   from collections import OrderedDict
@@ -471,39 +482,57 @@ def get_optimizer(args, ansatz:Circuit) -> Optimizer:
 
 
 @timer
-def run_pulse(args, ansatz:Circuit, ham:Hamiltonian) -> Tuple[float, Circuit, int]:
+def run_noisy_eval(args, ctx:Context, ansatz:Circuit) -> Tuple[float, Circuit, QubitMapping, int]:
   ''' real backend config noisy simulatoion '''
 
-  name = f'Fake{args.S}'
-  system_model: FakeBackend = globals()[name]()
+  # run circuit
+  estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=True))
+  job: Job = estimator.run(ansatz, ctx.ham)
+  result: EstimatorResult = job.result()
+  ene_gs_noiseless = result.experiments[0]['values'] + ctx.mol.nuclear_repulsion_energy
+  print('>> run circuit:', ene_gs_noiseless)
 
-  if 'save device info':
-    fp = LOG_PATH / f'{name}.json'
-    if not fp.exists(): save_json(system_model.properties().to_dict(), fp)
+  # run transpiled circuit
+  system_model = get_backend(args)
+  # NOTE: transpile does NOT conserve working num_qubit for UCC-like ansatz :(
+  transpiled_circuit = transpile(ansatz, backend=system_model, seed_transpiler=args.seed, optimization_level=args.level)
+  qubit_mapping: Dict[Qubit, int] = transpiled_circuit.layout.input_qubit_mapping
+  transpiled_circuit.layout.initial_layout
+  transpiled_circuit.layout.final_layout
+  transpiled_circuit.layout.input_qubit_mapping
+  mapping = { i: qbit.index for qbit, i in qubit_mapping.items() }  # original => transpiled
+  ene_gs_noisy = run_transpiled_circuit(args, ctx, transpiled_circuit, mapping)
+  print('>> run transpiled circuit:', ene_gs_noisy)
 
-  if 'noiseless simulation':
-    estimator = get_estimator(args)
-    job: Job = estimator.run(ansatz, ham)
-    result: EstimatorResult = job.result()
-    ene_gs = result.experiments[0]['values']
-    print('>> noiseless simulation:', ene_gs)
+  duration = run_pulse(system_model, transpiled_circuit)
+  return ene_gs_noisy, transpiled_circuit, mapping, duration
 
-  if 'noisy simulation':
-    transpiled_circuit = transpile(ansatz, backend=system_model, seed_transpiler=args.seed)
-    #transpiled_circuit = remove_idle_qwires(transpiled_circuit)
-    if 'expand `ham` num_qubits to match `transpiled_circuit`':
-      n_qubits_ex = transpiled_circuit.num_qubits - ham.num_qubits
-      Is = 'I' * n_qubits_ex
-      paulis: List[Pauli] = [p.expand(Is) for p in ham.paulis]
-      ham_ex = Hamiltonian(paulis, ham.coeffs)
-    assert ham_ex.num_qubits == transpiled_circuit.num_qubits
-    estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=False))
-    job: Job = estimator.run(transpiled_circuit, ham_ex)
-    result: EstimatorResult = job.result()
-    ene_gs = result.experiments[0]['values']
-    print('>> noisy simulation:', ene_gs)
 
+def run_pulse(system_model:FakeBackend, transpiled_circuit:Circuit) -> int:
   with pulse.build(system_model) as schedule:
     schedule: ScheduleBlock
     pulse.call(transpiled_circuit)
-  return ene_gs, transpiled_circuit, schedule.duration
+  return schedule.duration
+
+
+def run_transpiled_circuit(args, ctx:Context, transpiled_circuit:Circuit, mapping:QubitMapping) -> float:
+  ham = ctx.ham
+
+  if 'align circuit and ham, apply qubit-index mapping':
+    def permute(string: str) -> str:
+      res = [None] * len(string)
+      for i, j in enumerate(mapping):
+        res[j] = string[i]
+      return ''.join(res)
+
+    n_qubits_ex = transpiled_circuit.num_qubits - ham.num_qubits
+    Is = 'I' * n_qubits_ex
+    paulis: List[Pauli] = [Pauli(permute(p.expand(Is).to_label())) for p in ham.paulis]
+    ham_ex = Hamiltonian(paulis, ham.coeffs)
+    assert ham_ex.num_qubits == transpiled_circuit.num_qubits
+
+  estimator = get_estimator(args, _get_primitive_options(args, noisy=True, transpile=False))
+  job: Job = estimator.run(transpiled_circuit, ham_ex)
+  result: EstimatorResult = job.result()
+  ene_gs = result.experiments[0]['values'] + ctx.mol.nuclear_repulsion_energy
+  return ene_gs

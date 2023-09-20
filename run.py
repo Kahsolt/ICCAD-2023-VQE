@@ -36,21 +36,29 @@ def run(args):
     print(f'>> Error Rate: {err_rate:%}')
 
     if args.skip_pulse:
-      mes_gs_t, ansatz_t, duration = None, None, None
+      mes_gs_t, ansatz_t, mapping, duration = None, None, None, None
       err_t, err_rate_t = None, None
     else:
-      mes_gs_t, ansatz_t, duration = run_pulse(args, ansatz, ctx.ham)
+      mes_gs_t, ansatz_t, mapping, duration = run_noisy_eval(args, ctx, ansatz)
       print(f'>> Duration: {duration}')
       err_t = abs(mes_gs_t - ref_gs)
-      print(f'>> Error (pulse): {err_t}')
+      print(f'>> Error (qsam): {err_t}')
       err_rate_t = err_t / abs(ref_gs)
-      print(f'>> Error Rate (pulse): {err_rate_t:%}')
+      print(f'>> Error Rate (qsam): {err_rate_t:%}')
 
   dt_end = datetime.now()
 
   name: str = args.name or exp_name(args)
   log_dp = LOG_PATH / name
   log_dp.mkdir(exist_ok=True)
+
+  if 'qsam':
+    with open(log_dp / 'ansatz.qsam', 'w', encoding='utf-8') as fh:
+      fh.write(ansatz.qasm())
+    if ansatz_t is not None:
+      with open(log_dp / 'ansatz_t.qsam', 'w', encoding='utf-8') as fh:
+        fh.write(ansatz_t.qasm())
+      save_json(mapping, log_dp / 'ansatz_t.layout')
 
   if 'plot':
     plt.rcParams['figure.figsize'] = (10, 4)
@@ -71,6 +79,8 @@ def run(args):
         'mes_gs': mes_gs,
         'err': err,
         'err_rate': err_rate,
+        'err_t': err_t,
+        'err_rate_t': err_rate_t,
         'duration': duration,
       },
       'ansatz': {
@@ -80,7 +90,6 @@ def run(args):
         'size': ansatz.size(),
         'depth': ansatz.depth(),
         'width': ansatz.width(),
-        'qasm': ansatz.qasm(),
       },
     }
     if ansatz_t is not None:
@@ -92,7 +101,6 @@ def run(args):
         'size': ansatz_t.size(),
         'depth': ansatz_t.depth(),
         'width': ansatz_t.width(),
-        'qasm': ansatz_t.qasm(),
       }
 
     save_json(data, log_dp / 'log.json')
@@ -105,6 +113,7 @@ if __name__ == '__main__':
   parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
   parser.add_argument('--simulator', default='automatic', choices=SIMULATORS, help='qiskit_aer simulator method')
   parser.add_argument('--shots', default=6000, help='shot-based simulator resource limit')
+  parser.add_argument('--level', default=0, type=int, choices=[0, 1, 2, 3], help='transpile optimize level')
   parser.add_argument('--skip_pulse', action='store_true', help='skip run real backend noisy simulation')
   # ham
   parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
