@@ -113,6 +113,7 @@ if __name__ == '__main__':
   parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
   parser.add_argument('--simulator', default='automatic', choices=SIMULATORS, help='qiskit_aer simulator method')
   parser.add_argument('--shots', default=6000, help='shot-based simulator resource limit')
+  parser.add_argument('--shots_mit', default=1000, help='error mitigation shots')
   parser.add_argument('--level', default=0, type=int, choices=[0, 1, 2, 3], help='transpile optimize level')
   parser.add_argument('--skip_pulse', action='store_true', help='skip run real backend noisy simulation')
   # ham

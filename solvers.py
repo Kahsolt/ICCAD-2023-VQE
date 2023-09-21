@@ -62,6 +62,18 @@ def solver_vqe(args, ctx:Context) -> Tuple[float, Circuit]:
   ansatz, init = get_ansatz(args, ctx)
   optimizer = get_optimizer(args, ansatz)
   solver = VQE(estimator, ansatz, optimizer, callback=partial(optim_callback, args))
+  if False:
+    # https://qiskit.org/documentation/stable/0.26/tutorials/noise/3_measurement_error_mitigation.html
+    noise_model = load_noise_file(args.N) if args.N else None
+    qi_noise_model_qasm = QuantumInstance(
+      backend=estimator,
+      shots=args.shots,
+      noise_model=noise_model, 
+      measurement_error_mitigation_cls=CompleteMeasFitter,
+      measurement_error_mitigation_shots=args.shots_mit,
+      seed_simulator=args.seed,
+      seed_transpiler=args.seed,
+    )
   solver.initial_point = init
   energy, ansatz_opt = GroundStateEigensolver_solve(args, solver, ctx)
   return energy, ansatz_opt

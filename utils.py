@@ -30,7 +30,8 @@ from qiskit.algorithms.optimizers import *
 from qiskit.algorithms.minimum_eigensolvers import VQEResult, AdaptVQEResult, SamplingVQEResult, NumPyMinimumEigensolverResult
 from qiskit.providers import JobV1 as Job
 from qiskit.providers.fake_provider import FakeBackend, FakeCairo, FakeKolkata, FakeMontreal
-from qiskit.utils import algorithm_globals
+from qiskit.utils import algorithm_globals, QuantumInstance
+from qiskit.utils.mitigation import CompleteMeasFitter
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import Estimator, Sampler
 from qiskit_aer.noise import NoiseModel

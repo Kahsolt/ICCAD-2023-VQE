@@ -113,6 +113,7 @@ baseline quant cfg: vqe-uccsd-cobyla(10)
   - qiskit-aer: [https://github.com/Qiskit/qiskit-aer](https://github.com/Qiskit/qiskit-aer)
   - qiskit-nature-pyscf: [https://github.com/qiskit-community/qiskit-nature-pyscf](https://github.com/qiskit-community/qiskit-nature-pyscf)
 - base code repo: [https://github.com/qccontest/QC-Contest-Demo](https://github.com/qccontest/QC-Contest-Demo)  
+- error mitigation: [https://qiskit.org/ecosystem/ibm-runtime/tutorials/Error-Suppression-and-Error-Mitigation.html](https://qiskit.org/ecosystem/ibm-runtime/tutorials/Error-Suppression-and-Error-Mitigation.html)
 
 ----
 by Armit
