@@ -4,6 +4,7 @@
 
 from utils import *
 from solvers import run_solver, fxs
+from qasm_optimize import optimize
 
 
 def exp_cfg(args) -> str:
@@ -57,7 +58,9 @@ def run(args):
       fh.write(ansatz.qasm())
     if ansatz_t is not None:
       with open(log_dp / 'ansatz_t.qsam', 'w', encoding='utf-8') as fh:
-        fh.write(ansatz_t.qasm())
+        qasm = ansatz_t.qasm()
+        qasm = optimize(qasm)
+        fh.write(qasm)
       save_json(mapping, log_dp / 'ansatz_t.layout')
 
   if 'plot':
