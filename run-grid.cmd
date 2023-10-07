@@ -1,7 +1,7 @@
 :noiseless_train
 
 REM Train an ansatz without noise using VQE
-REM then apply tricks like error mitigation in noisy runtime
+REM then run on noisy machines
 
 SET NAME=noiseless_cobyla
 python run.py -H txt -A chcs -O cobyla -T 500 --tol 1e-6 --shots 500 --name %NAME%

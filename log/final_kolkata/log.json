@@ -1,0 +1,62 @@
+{
+  "args": {
+    "S": "Montreal",
+    "N": "",
+    "simulator": "automatic",
+    "shots": "500",
+    "shots_mit": 1000,
+    "level": 0,
+    "skip_pulse": false,
+    "H": "D:\\Desktop\\Workspace\\@Contest\\ICCAD 2023 Drug Discovery Challenge\\QC-Contest-Demo\\Hamiltonian\\OHhamiltonian.txt",
+    "thresh": 1e-06,
+    "Y": "numpy",
+    "X": "vqe",
+    "ansatz": "chcs",
+    "init": "noise",
+    "reps": 1,
+    "O": "cobyla",
+    "maxiter": 100,
+    "tol": 1e-08,
+    "disp": false,
+    "seed": 170,
+    "name": "final_kolkata",
+    "device": "CPU"
+  },
+  "cmd": "run.py -H txt -A chcs -I noise -O cobyla -T 100 --tol 1e-8 --shots 500 --name final_kolkata",
+  "tm_start": "2023-10-08 03:37:03.252424",
+  "tm_end": "2023-10-08 03:39:28.664639",
+  "tm_cost": 145.412215,
+  "metrics": {
+    "ref_gs": -74.3871462681872,
+    "mes_gs": -73.95219764024947,
+    "err": 0.4349486279377288,
+    "err_rate": 0.00584709388325791,
+    "err_t": 0.42898539861893425,
+    "err_rate_t": 0.005766929101868187,
+    "duration": 54720
+  },
+  "ansatz": {
+    "n_qubit": 12,
+    "n_ancilla": 0,
+    "n_cbit": 0,
+    "size": 74,
+    "depth": 22,
+    "width": 12,
+    "params": [
+      -0.030134743375472214,
+      -0.06569760378671849,
+      -0.011734328340349622,
+      -0.007934895288394543,
+      0.05083467959874859,
+      -0.10922440688138696
+    ]
+  },
+  "transpiled_ansatz": {
+    "n_qubit": 27,
+    "n_ancilla": 0,
+    "n_cbit": 0,
+    "size": 272,
+    "depth": 87,
+    "width": 27
+  }
+}

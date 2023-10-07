@@ -27,7 +27,11 @@ Contest page: [https://qccontest.github.io/QC-Contest/](https://qccontest.github
   - `python _test_examplecode.py -T 2`; this might be very **slow**, just be patient :(
   - `python _test_NoiseModel_and_SystemModel.py`
 
-⚪ run
+⚪ run the results for submission
+
+- run jupyter notebook `run_submission.ipynb`
+
+⚪ run development
 
 ⚠ for Windows where PySCF is not available, you could **only** run with a pre-calculated ham file
 

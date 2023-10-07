@@ -134,14 +134,15 @@ with open(SEED_FILE, 'r', encoding='utf-8') as fh:
   lines = fh.read().strip().replace(',', '').split('\n')
   seeds = [int(seed) for seed in lines]
 
+log = print
 
 def timer(fn:Callable):
   def wrapper(*args, **kwargs):
-    print(f'[Timer]: "{fn.__name__}" starts')
+    log(f'[Timer]: "{fn.__name__}" starts')
     start = time()
     r = fn(*args, **kwargs)
     end = time()
-    print(f'[Timer]: "{fn.__name__}" took {end - start:.3f}s')
+    log(f'[Timer]: "{fn.__name__}" took {end - start:.3f}s')
     return r
   return wrapper
 
@@ -263,7 +264,7 @@ def get_context(args) -> Context:
     problem = driver.run()
 
     if not INTG_FILE.exists():
-      print('<< cache the integrals on Linux :)')
+      log('<< cache the integrals on Linux :)')
       integrals = problem.hamiltonian.electronic_integrals
       tensor_to_numpy = lambda x: { k: v.array for k, v in x._data.items() }
       integral_parts = {
@@ -274,7 +275,7 @@ def get_context(args) -> Context:
       with open(INTG_FILE, 'wb') as fh:
         pkl.dump(integral_parts, fh)
   else:
-    print('<< make a dummy problem on Windows :)')
+    log('<< make a dummy problem on Windows :)')
     with open(INTG_FILE, 'rb') as fh:
       raw_integral_parts: Dict[str, Dict[str, np.ndarray]] = pkl.load(fh)
     integral_parts = { k: PolynomialTensor(v) for k, v in raw_integral_parts.items() }
@@ -286,20 +287,20 @@ def get_context(args) -> Context:
     problem.num_spatial_orbitals = 6
     problem.num_particles = (4, 4)
 
-  print('[mol]')
-  print('   n_spatial_orbitals:',       problem.num_spatial_orbitals)       # 6
-  print('   n_particles:',              problem.num_particles)              # (4, 4)
-  print('   nuclear_repulsion_energy:', problem.nuclear_repulsion_energy)   # 4.36537496654537
+  log('[mol]')
+  log('   n_spatial_orbitals:',       problem.num_spatial_orbitals)       # 6
+  log('   n_particles:',              problem.num_particles)              # (4, 4)
+  log('   nuclear_repulsion_energy:', problem.nuclear_repulsion_energy)   # 4.36537496654537
 
   if is_run:
-    print('[ham]')
+    log('[ham]')
     ham: ElectronicEnergy = problem.hamiltonian
-    print('   ham.register_length:', ham.register_length)   # 6
+    log('   ham.register_length:', ham.register_length)       # 6
     fermi_op: FermionicOp = ham.second_q_op()  # fermi
-    print('   len(fermi_op):', len(fermi_op))               # 1860
+    log('   len(fermi_op):', len(fermi_op))                   # 1860
     fermi_op = fermi_op.normal_order()
-    print('   len(fermi_op_ordered):', len(fermi_op))       # 630
-    print('   num_spin_orbitals:', fermi_op.num_spin_orbitals)  # 12
+    log('   len(fermi_op_ordered):', len(fermi_op))           # 630
+    log('   num_spin_orbitals:', fermi_op.num_spin_orbitals)  # 12
 
     mapper = JordanWignerMapper()
     if 'new API':
@@ -307,15 +308,15 @@ def get_context(args) -> Context:
     else:
       converter = QubitConverter(mapper=mapper, two_qubit_reduction=True, sort_operators=True)
       pauli_op: SparsePauliOp = converter.convert(fermi_op)   # pauli
-    print('   n_qubits:', pauli_op.num_qubits)      # 12
+    log('   n_qubits:', pauli_op.num_qubits)      # 12
   else:
     pauli_op = load_ham_file(args.H)
 
-  print('   n_ham_dim:', pauli_op.dim)            # (4096, 4096)
-  print('   n_ham_terms:', pauli_op.size)         # 631
+  log('   n_ham_dim:', pauli_op.dim)              # (4096, 4096)
+  log('   n_ham_terms:', pauli_op.size)           # 631
   pauli_op = pauli_op.simplify(args.thresh)
   pauli_op = pauli_op.chop(args.thresh)
-  print('   n_ham_terms (trim):', pauli_op.size)  # <=631
+  log('   n_ham_terms (trim):', pauli_op.size)    # <=631
 
   # FIXME: how to utilize this technique?
   pauli_op.group_commuting(qubit_wise=True)       # 136

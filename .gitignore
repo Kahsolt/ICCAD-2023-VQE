@@ -6,4 +6,8 @@ __pycache__/
 QC-Contest-Demo/
 
 # log
-log/
+log/*
+!log/final_*
+
+# pynb
+.ipynb_checkpoints
