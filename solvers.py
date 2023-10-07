@@ -8,11 +8,11 @@ from qiskit.algorithms.minimum_eigensolvers import VQE, AdaptVQE, SamplingVQE, Q
 from qiskit.algorithms.minimum_eigensolvers import MinimumEigensolver, NumPyMinimumEigensolver
 
 
-def run_solver(args, name:str, ctx:Context) -> Union[float, Tuple[float, Circuit]]:
+def run_solver(args, name:str, ctx:Context) -> Union[float, Tuple[float, Tuple[Circuit, Params]]]:
   return globals()[f'solver_{name}'](args, ctx)
 
 
-def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -> Union[float, Tuple[float, Circuit]]:
+def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -> Union[float, Tuple[float, Tuple[Circuit, Params]]]:
   from qiskit_nature.second_q.problems.eigenstate_result import EigenstateResult
   from qiskit_nature.second_q.algorithms.ground_state_solvers import GroundStateEigensolver
 
@@ -27,8 +27,9 @@ def GroundStateEigensolver_solve(args, solver:MinimumEigensolver, ctx:Context) -
     if args.disp: print(eigen_res)
     gs_ene = eigen_res.groundenergy + ctx.mol.nuclear_repulsion_energy
   if hasattr(solver_res, 'optimal_point'):
+    params_opt = list(solver_res.optimal_parameters.values())
     ansatz_opt = solver_res.optimal_circuit.assign_parameters(solver_res.optimal_parameters)
-    return gs_ene, ansatz_opt
+    return gs_ene, (ansatz_opt, params_opt)
   else:
     return gs_ene
 
@@ -75,8 +76,7 @@ def solver_vqe(args, ctx:Context) -> Tuple[float, Circuit]:
       seed_transpiler=args.seed,
     )
   solver.initial_point = init
-  energy, ansatz_opt = GroundStateEigensolver_solve(args, solver, ctx)
-  return energy, ansatz_opt
+  return GroundStateEigensolver_solve(args, solver, ctx)
 
 
 @timer
@@ -87,8 +87,7 @@ def solver_adavqe(args, ctx:Context) -> Tuple[float, Circuit]:
   vqe = VQE(estimator, ansatz, optimizer, callback=partial(optim_callback, args))
   solver = AdaptVQE(vqe)
   solver.initial_point = init
-  energy, ansatz_opt = GroundStateEigensolver_solve(args, solver, ctx)
-  return energy, ansatz_opt
+  return GroundStateEigensolver_solve(args, solver, ctx)
 
 
 @timer
@@ -98,8 +97,7 @@ def solver_svqe(args, ctx:Context) -> Tuple[float, Circuit]:
   optimizer = get_optimizer(args, ansatz)
   solver = SamplingVQE(sampler, ansatz, optimizer, callback=partial(optim_callback, args))
   solver.initial_point = init
-  energy, ansatz_opt = GroundStateEigensolver_solve(args, solver, ctx)
-  return energy, ansatz_opt
+  return GroundStateEigensolver_solve(args, solver, ctx)
 
 
 @timer
@@ -107,5 +105,4 @@ def solver_qaoa(args, ctx:Context) -> Tuple[float, Circuit]:
   sampler = get_sampler(args)
   optimizer = get_optimizer(args, None)
   solver = QAOA(sampler, optimizer, reps=args.reps, callback=partial(optim_callback, args))
-  energy, ansatz_opt = GroundStateEigensolver_solve(args, solver, ctx)
-  return energy, ansatz_opt
+  return GroundStateEigensolver_solve(args, solver, ctx)

@@ -27,7 +27,7 @@ def run(args):
   
     ref_gs = run_solver(args, args.Y, ctx)
     print(f'>> ref_gs: {ref_gs:}')
-    mes_gs, ansatz = run_solver(args, args.X, ctx)
+    mes_gs, (ansatz, params) = run_solver(args, args.X, ctx)
     print(f'>> mes_gs: {mes_gs:}')
 
     err = abs(mes_gs - ref_gs)
@@ -90,6 +90,7 @@ def run(args):
         'size': ansatz.size(),
         'depth': ansatz.depth(),
         'width': ansatz.width(),
+        'params': params,
       },
     }
     if ansatz_t is not None:
