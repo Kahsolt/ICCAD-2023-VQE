@@ -107,41 +107,6 @@ def run(args):
 
 
 if __name__ == '__main__':
-  parser = ArgumentParser()
-  # hardware
-  parser.add_argument('-S', default='Montreal', choices=['Montreal'], help='system model (27 qubits)')
-  parser.add_argument('-N', default='', choices=['', 'cairo', 'kolkata', 'montreal'], help='noise model data (27 qubits)')
-  parser.add_argument('--simulator', default='automatic', choices=SIMULATORS, help='qiskit_aer simulator method')
-  parser.add_argument('--shots', default=6000, help='shot-based simulator resource limit')
-  parser.add_argument('--shots_mit', default=1000, help='error mitigation shots')
-  parser.add_argument('--level', default=0, type=int, choices=[0, 1, 2, 3], help='transpile optimize level')
-  parser.add_argument('--skip_pulse', action='store_true', help='skip run real backend noisy simulation')
-  # ham
-  parser.add_argument('-H', default='run', help=f'"run" requires PySCF, "txt" loads {HAM_FILE}; or filepath to your own ham, see fmt in `utils.load_ham_file()`')
-  parser.add_argument('--thresh', default=1e-6, type=float, help='ham term trim amplitude thresh')
-  # eigensolver
-  parser.add_argument('-Y', default='numpy', choices=['numpy', 'const'], help='classical eigensolver (ref_val)')
-  parser.add_argument('-X', default='vqe', choices=['vqe', 'adavqe', 'svqe', 'qaoa'], help='quantum eigensolver')
-  # ansatz
-  parser.add_argument('-A', '--ansatz', default='uccsd', choices=ANSATZS, help='ansatz model')
-  parser.add_argument('-I', '--init',   default='auto', choices=INITS, help='ansatz param init')
-  parser.add_argument('--reps', default=1, help='ansatz circuit n_repeats')
-  # optim
-  parser.add_argument('-O', default='cobyla', choices=OPTIMZERS.keys(), help='optim method')
-  parser.add_argument('-T', '--maxiter', default=10, type=int, help='optim maxiter')
-  parser.add_argument('--tol', default=1e-5, type=float, help='optim tolerance')
-  parser.add_argument('--disp', action='store_true', help='optim show verbose result')
-  # misc
-  parser.add_argument('--seed', default=170, type=int, help='rand seed')
-  parser.add_argument('--name', help='experiment name under log folder, default to time-string')
-  args = parser.parse_args()
-
-  if args.H == 'txt': args.H = str(HAM_FILE)
-  if args.H != 'run': assert Path(args.H).is_file(), f'-H {args.H!r} should be a valid file'
-
-  seed_everything(args.seed)
-
-  args.device = 'GPU' if 'GPU' in AerSimulator().available_devices() else 'CPU'
-
+  args = get_args()
   print(vars(args))
   run(args)
