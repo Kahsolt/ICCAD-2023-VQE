@@ -23,9 +23,9 @@
     "device": "CPU"
   },
   "cmd": "run.py -H txt -A chcs -I noise -O cobyla -T 100 --tol 1e-8 --shots 500 --name final_cairo",
-  "tm_start": "2023-10-08 03:34:36.665088",
-  "tm_end": "2023-10-08 03:36:50.926072",
-  "tm_cost": 134.260984,
+  "tm_start": "2023-10-08 11:21:58.803354",
+  "tm_end": "2023-10-08 11:23:06.151777",
+  "tm_cost": 67.348423,
   "metrics": {
     "ref_gs": -74.3871462681872,
     "mes_gs": -73.95219764024947,

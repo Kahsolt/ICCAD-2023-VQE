@@ -57,8 +57,10 @@ def run(args):
     with open(log_dp / 'ansatz.qsam', 'w', encoding='utf-8') as fh:
       fh.write(ansatz.qasm())
     if ansatz_t is not None:
+      qasm = ansatz_t.qasm()
+      with open(log_dp / 'ansatz_t.raw.qsam', 'w', encoding='utf-8') as fh:
+        fh.write(qasm)
       with open(log_dp / 'ansatz_t.qsam', 'w', encoding='utf-8') as fh:
-        qasm = ansatz_t.qasm()
         qasm = optimize(qasm)
         fh.write(qasm)
       save_json(mapping, log_dp / 'ansatz_t.layout')

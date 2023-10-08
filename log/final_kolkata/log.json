@@ -23,9 +23,9 @@
     "device": "CPU"
   },
   "cmd": "run.py -H txt -A chcs -I noise -O cobyla -T 100 --tol 1e-8 --shots 500 --name final_kolkata",
-  "tm_start": "2023-10-08 03:37:03.252424",
-  "tm_end": "2023-10-08 03:39:28.664639",
-  "tm_cost": 145.412215,
+  "tm_start": "2023-10-08 11:23:09.206396",
+  "tm_end": "2023-10-08 11:24:13.722011",
+  "tm_cost": 64.515615,
   "metrics": {
     "ref_gs": -74.3871462681872,
     "mes_gs": -73.95219764024947,

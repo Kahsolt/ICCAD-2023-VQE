@@ -2,6 +2,8 @@
 # Author: Armit
 # Create Time: 2023/10/08
 
+from argparse import ArgumentParser
+from pathlib import Path
 from re import compile as Regex
 from typing import List, Tuple
 from math import pi
@@ -49,12 +51,34 @@ def _norm_rot_angle(phi:float) -> float:
 
 ''' processors '''
 
+def sanitize_rot_gate_angle(lines:Lines) -> Lines:
+  ''' R(phi) => R(phi') '''
+
+  ret = []
+
+  for this in lines:
+    (g0, p0), q0 = _split_gate_qubit(this)
+    if g0 in PGATES:
+      phi: float = eval(p0)
+      phi = _norm_rot_angle(phi)
+      phi_str: str = _try_rnd_to_pi(phi)
+      if phi_str != PHI_ZERO:
+        ret.append(f'{g0}({phi_str}) {q0};')
+    else:
+      ret.append(this)
+
+  return ret
+
 def fold_rot_gate(lines:Lines) -> Lines:
+  ''' R(psi)-R(phi) => R(psi+phi) '''
+
+  if len(lines) < 2: return lines
+
   ret = [lines[0]]
 
   for this in lines[1:]:
-    (g0, p0), q0 = _split_gate_qubit(this)
-    (g1, p1), q1 = _split_gate_qubit(ret[-1])
+    (g0, p0), q0 = _split_gate_qubit(ret[-1])
+    (g1, p1), q1 = _split_gate_qubit(this)
     if q0 == q1 and g0 == g1 and g0 in PGATES:
       phi: float = eval(p0) + eval(p1)
       phi = _norm_rot_angle(phi)
@@ -67,17 +91,22 @@ def fold_rot_gate(lines:Lines) -> Lines:
 
   return ret
 
-def sanitize_rot_gate_angle(lines:Lines) -> Lines:
-  ret = []
+def fold_sx_rz_sx_rz(lines:Lines) -> Lines:
+  ''' SX-RZ(pi)-SX-RZ(pi) => -jI => I'''
 
-  for this in lines:
-    (g0, p0), q0 = _split_gate_qubit(this)
-    if g0 in PGATES:
-      phi: float = eval(p0)
-      phi = _norm_rot_angle(phi)
-      phi_str: str = _try_rnd_to_pi(phi)
-      if phi_str != PHI_ZERO:
-        ret.append(f'{g0}({phi_str}) {q0};')
+  if len(lines) < 4: return lines
+
+  ret = [lines[0], lines[1], lines[2]]
+  for this in lines[3:]:
+    (g0, p0), q0 = _split_gate_qubit(ret[-3])
+    (g1, p1), q1 = _split_gate_qubit(ret[-2])
+    (g2, p2), q2 = _split_gate_qubit(ret[-1])
+    (g3, p3), q3 = _split_gate_qubit(this)
+
+    if (q0 == q1 == q2 == q3) and (g0 == g2 == 'sx') and (g1 == g3 == 'rz') and (p1 == p3 == 'pi'):
+      ret.pop(-1)
+      ret.pop(-1)
+      ret.pop(-1)
     else:
       ret.append(this)
 
@@ -95,35 +124,25 @@ def optimize(qasm:str) -> str:
 
   head, body = _split(qasm)
   len_raw = len(body)
-  body = fold_rot_gate(body)
   body = sanitize_rot_gate_angle(body)
+  body = fold_rot_gate(body)
+  body = fold_sx_rz_sx_rz(body)
   len_opt = len(body)
   print(f'>> qasm_optimize: {len_raw} => {len_opt}')
   return _combine(head, body)
 
 
 if __name__ == '__main__':
-  qasm = '''
-OPENQASM 2.0;
-include "qelib1.inc";
-qreg q[27];
-x q[0];
-rz(0.7949563763792666) q[0];
-sx q[0];
-rz(pi) q[0];
-sx q[0];
-rz(3*pi) q[0];
-rz(pi/2) q[0];
-sx q[0];
-rz(pi/2) q[0];
-x q[1];
-rz(-0.7758399504156299) q[1];
-sx q[1];
-rz(pi) q[1];
-sx q[1];
-rz(3*pi) q[1];
-x q[2];
-'''
+  parser = ArgumentParser()
+  parser.add_argument('exp_dp', type=Path, help='path to log folder')
+  args = parser.parse_args()
+
+  in_fp = Path(args.exp_dp) / 'ansatz_t.raw.qsam'
+  with open(in_fp, 'r', encoding='utf-8') as fh:
+    qasm = fh.read()
 
   qasm_opt = optimize(qasm)
-  print(qasm_opt)
+
+  out_fp = in_fp.with_stem(in_fp.stem[:-len('.raw')])
+  with open(out_fp, 'w', encoding='utf-8') as fh:
+    fh.write(qasm_opt)
